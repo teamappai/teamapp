@@ -11,7 +11,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "echo \"No test suite yet — add Vitest in a later phase (see CLAUDE.md).\" && exit 0",
-    "db:types": "supabase gen types typescript --project-id YOUR_SUPABASE_PROJECT_ID > types/supabase.ts",
+    "db:types": "supabase gen types typescript --project-id fjgnihkvqplfncmdgtpq > types/supabase.ts",
     "db:migrate": "supabase db push",
     "db:reset": "supabase db reset",
     "prepare": "husky"
