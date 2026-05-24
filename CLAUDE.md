@@ -71,10 +71,12 @@ middleware.ts    refreshes the Supabase session on every request
 | `pnpm db:types`     | Regenerate `types/supabase.ts` from the remote schema |
 | `pnpm db:migrate`   | Push migrations (`supabase db push`)                  |
 | `pnpm db:reset`     | Reset the local DB and re-run migrations + seeds      |
+| `pnpm db:seed`      | Seed test accounts + sample data (`db/seed/seed.ts`)  |
 
-> `db:types` has a `YOUR_SUPABASE_PROJECT_ID` placeholder in `package.json` —
-> replace it with the real project id. The `db:*` scripts require the Supabase
-> CLI installed and a linked project.
+> The `db:*` scripts require the Supabase CLI installed and a linked project.
+> Migrations are authored in `db/migrations/` (the canonical location);
+> `supabase/migrations` is a symlink to it so the CLI picks them up.
+> `db/seed/seed.ts` and `scripts/*.ts` run under `tsx` and read `.env.local`.
 
 ## Before you change anything
 
