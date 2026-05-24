@@ -49,8 +49,13 @@ Annual billing is ~20% off 12× monthly. Stripe price IDs in `plans.ts` are
 ```
 app/
   (marketing)/   public landing site (placeholder for now)
-  (auth)/        login / signup / forgot-password (Phase 2)
-  (app)/         authenticated app shell — sidebar layout (Phase 2+)
+  (auth)/        login / signup / forgot-password / reset-password (Phase 2)
+  app/           authenticated app — URL prefix /app/* (dashboard, admin,
+                 profile). A literal segment (NOT a route group) so the spec's
+                 /app/* paths are real URLs; middleware gates everything here.
+  auth/confirm/  email-link callback (recovery + email-change verifyOtp/PKCE)
+  accept-invite/ invitation entry → validates token → /signup
+  logout/        POST-only sign-out → /
   api/           route handlers
 components/
   ui/            shadcn primitives (added via `pnpm dlx shadcn@2 add <name>`)
@@ -75,6 +80,46 @@ middleware.ts    refreshes the Supabase session on every request
 - `lib/supabase/service.ts` — service-role client. Marked `server-only`, and an
   ESLint rule additionally blocks importing it from `components/**`.
   **Never** import this into client code — it bypasses Row Level Security.
+
+## Authentication (Phase 2)
+
+Auth is Supabase Auth + `@supabase/ssr`. Signup is **invite-only**: there is no
+public registration. `app/(auth)/actions.ts` holds the server actions (sign-in,
+password reset, accept-invitation); profile/2FA actions live in
+`app/app/profile/actions.ts`. Zod schemas are shared between client forms and
+server actions in `lib/validations/auth.ts`.
+
+- **Role homes** (`lib/constants/roles.ts`): `super_admin → /app/admin`, everyone
+  else `→ /app/dashboard`.
+- **Middleware** (`lib/supabase/middleware.ts`) refreshes the session and gates
+  routes: unauthenticated `/app/*` → `/login?next=…`; authenticated on
+  `/login`/`/signup` → role home; `super_admin` without a verified TOTP factor is
+  forced to `/app/profile/2fa-required` (audit F-008).
+- **Profiles are not auto-created** — there is no `auth.users` trigger.
+  `acceptInvitation` creates the auth user **and** the `public.users` row with
+  the service-role client, then signs in. Mirror this pattern for any other
+  server-side user creation.
+- **Email change** uses `updateUser({ email })` (verification-gated). The
+  `public.users.email` mirror is **not** synced until confirmation — wire a
+  webhook/trigger in a later phase if the mirror must stay current.
+
+### Supabase email templates (configure in the Dashboard)
+
+Custom transactional emails (invitations, etc.) will use Resend later. For now
+we rely on Supabase's built-in templates — customize them in
+**Dashboard → Authentication → Email Templates** with the TeamApp logo and a
+clean text-only layout. Point the action links at the confirm route so the SSR
+session is established correctly:
+
+| Template           | Confirmation URL to set                                                                       |
+| ------------------ | --------------------------------------------------------------------------------------------- |
+| **Reset Password** | `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery&next=/reset-password`  |
+| **Change Email**   | `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email_change&next=/app/profile` |
+
+`/auth/confirm` (`app/auth/confirm/route.ts`) accepts both the `token_hash`
+(`verifyOtp`) and `code` (PKCE `exchangeCodeForSession`) link formats, so either
+Supabase default works. Set **Site URL** and **Redirect URLs** to include the
+app origin (`NEXT_PUBLIC_APP_URL`) plus `…/auth/confirm` and `…/reset-password`.
 
 ## Commands
 
@@ -107,3 +152,16 @@ middleware.ts    refreshes the Supabase session on every request
    `pnpm db:types`, and review the diff in `types/supabase.ts`.
 5. Keep the `client` / `server` / `service` Supabase boundary intact — never
    import `service.ts` or `server.ts` from a Client Component.
+
+## Pre-launch follow-ups
+
+- **Verify the Supabase email template + URL configuration end-to-end** — the
+  **Reset Password** and **Confirm Email Change** templates point at
+  `/auth/confirm` (see "Supabase email templates" above), and the **Site URL** +
+  **Redirect URLs** allowlist includes `…/auth/confirm` (and `…/reset-password`).
+  Run a real reset and a real email-change through to confirm the SSR session is
+  established correctly.
+- **Add a `public.users.email` mirror trigger from `auth.users.email`** (target:
+  Phase 12). Email changes go through `updateUser({ email })` and are only
+  reflected in `auth.users` on confirmation; the `public.users.email` mirror is
+  not synced until a trigger/webhook keeps it current.
