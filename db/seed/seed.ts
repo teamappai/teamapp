@@ -13,12 +13,16 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "../../types/supabase";
+import { getPlan, type PlanId } from "../../lib/billing/plans";
 
 type Tables = Database["public"]["Tables"];
 type UserRole = Database["public"]["Enums"]["user_role"];
 
 const PASSWORD = "DevPass!123";
 const COMPANY_SLUG = "homeready-team";
+// HomeReady demo company plan. Seat count is derived from plans.ts — never
+// hardcode seat numbers here (pricing source of truth: lib/billing/plans.ts).
+const COMPANY_PLAN: PlanId = "pro";
 
 // ── env loading ───────────────────────────────────────────────────────────────
 function loadEnvLocal(): void {
@@ -161,15 +165,16 @@ async function main(): Promise<void> {
     status: "active",
   });
 
-  // 2) company
+  // 2) company — seat count comes from the canonical plan, not a literal.
+  const plan = getPlan(COMPANY_PLAN);
   const { data: company, error: companyErr } = await admin
     .from("companies")
     .upsert(
       {
         name: "HomeReady Team",
         slug: COMPANY_SLUG,
-        plan: "pro",
-        seats_total: 30,
+        plan: COMPANY_PLAN,
+        seats_total: plan.included_seats,
         status: "active",
         signed_up_source: "seed",
       },
