@@ -10,6 +10,10 @@ export type SessionProfile = {
   profile: Profile;
   /** The user's company name, when they belong to one (null for super_admin). */
   companyName: string | null;
+  /** Brokerage the company operates under, for compliance display (audit F-009). */
+  brokerageName: string | null;
+  /** 2-letter state code for the brokerage license jurisdiction. */
+  brokerageState: string | null;
 };
 
 /**
@@ -34,14 +38,18 @@ export async function getSessionProfile(): Promise<SessionProfile | null> {
   if (!profile) return null;
 
   let companyName: string | null = null;
+  let brokerageName: string | null = null;
+  let brokerageState: string | null = null;
   if (profile.company_id) {
     const { data: company } = await supabase
       .from("companies")
-      .select("name")
+      .select("name, brokerage_name, brokerage_state")
       .eq("id", profile.company_id)
       .single();
     companyName = company?.name ?? null;
+    brokerageName = company?.brokerage_name ?? null;
+    brokerageState = company?.brokerage_state ?? null;
   }
 
-  return { user, profile, companyName };
+  return { user, profile, companyName, brokerageName, brokerageState };
 }
