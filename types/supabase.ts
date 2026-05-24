@@ -224,6 +224,9 @@ export type Database = {
       }
       companies: {
         Row: {
+          brokerage_license_number: string | null
+          brokerage_name: string | null
+          brokerage_state: string | null
           created_at: string
           deleted_at: string | null
           id: string
@@ -240,6 +243,9 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          brokerage_license_number?: string | null
+          brokerage_name?: string | null
+          brokerage_state?: string | null
           created_at?: string
           deleted_at?: string | null
           id?: string
@@ -256,6 +262,9 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          brokerage_license_number?: string | null
+          brokerage_name?: string | null
+          brokerage_state?: string | null
           created_at?: string
           deleted_at?: string | null
           id?: string

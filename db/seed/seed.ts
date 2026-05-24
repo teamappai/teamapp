@@ -177,6 +177,9 @@ async function main(): Promise<void> {
         seats_total: plan.included_seats,
         status: "active",
         signed_up_source: "seed",
+        brokerage_name: "Real Brokerage",
+        brokerage_license_number: null,
+        brokerage_state: "CA",
       },
       { onConflict: "slug" },
     )

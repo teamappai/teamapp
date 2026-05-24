@@ -28,11 +28,13 @@ import { updateProfile } from "./actions";
 export function ProfileForm({
   role,
   defaults,
-  companyName,
+  brokerageName,
+  brokerageState,
 }: {
   role: UserRole;
   defaults: ProfileInput;
-  companyName: string | null;
+  brokerageName: string | null;
+  brokerageState: string | null;
 }) {
   const form = useForm<ProfileInput>({
     resolver: zodResolver(profileSchema(role)),
@@ -142,9 +144,15 @@ export function ProfileForm({
         ) : null}
 
         {showsBrokerageInfo(role) ? (
-          <div className="space-y-1">
-            <FormLabel>Brokerage</FormLabel>
-            <Input value={companyName ?? "—"} readOnly disabled />
+          <div className="space-y-4">
+            <div className="space-y-1">
+              <FormLabel>Brokerage name</FormLabel>
+              <Input value={brokerageName ?? "—"} readOnly disabled />
+            </div>
+            <div className="space-y-1">
+              <FormLabel>Brokerage state</FormLabel>
+              <Input value={brokerageState ?? "—"} readOnly disabled />
+            </div>
             <p className="text-muted-foreground text-xs">
               Managed by your team lead.
             </p>

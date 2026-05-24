@@ -21,7 +21,7 @@ export default async function ProfilePage() {
   const session = await getSessionProfile();
   if (!session) redirect("/login");
 
-  const { profile, user, companyName } = session;
+  const { profile, user, brokerageName, brokerageState } = session;
   const role = profile.role as UserRole;
 
   return (
@@ -51,7 +51,8 @@ export default async function ProfilePage() {
         <CardContent>
           <ProfileForm
             role={role}
-            companyName={companyName}
+            brokerageName={brokerageName}
+            brokerageState={brokerageState}
             defaults={{
               fullName: profile.full_name ?? "",
               email: user.email ?? profile.email,
