@@ -10,6 +10,26 @@ third-party integrations yet. The canonical feature spec lives in
 [`../TeamApp_Audit_findings.md`](../TeamApp_Audit_findings.md) (parent project
 folder) — treat it as the source of truth for what each phase must deliver.
 
+## Pricing — Source of Truth
+
+Canonical pricing lives in [`lib/billing/plans.ts`](lib/billing/plans.ts).
+
+> **All pricing displays in marketing, app billing UI, Stripe products, and
+> analytics MUST read from `/lib/billing/plans.ts`. Hardcoding prices anywhere
+> else is a bug.**
+
+All money is stored as integer **cents** (never floats). Current plans (base
+monthly price, for quick human reference only — the file is authoritative):
+
+| Plan id     | Monthly | Included seats |
+| ----------- | ------- | -------------- |
+| `launch`    | $250    | 10             |
+| `pro`       | $595    | 25             |
+| `brokerage` | $1,500  | 100            |
+
+Annual billing is ~20% off 12× monthly. Stripe price IDs in `plans.ts` are
+`null` and get filled in during Phase 12.
+
 ## Tech stack
 
 | Concern         | Choice                                                      |
