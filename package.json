@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "echo \"No test suite yet — add Vitest in a later phase (see CLAUDE.md).\" && exit 0",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "db:types": "supabase gen types typescript --project-id fjgnihkvqplfncmdgtpq > types/supabase.ts",
     "db:migrate": "supabase db push",
     "db:reset": "supabase db reset",
@@ -24,6 +25,7 @@
     "class-variance-authority": "^0.7.1",
     "client-only": "^0.0.1",
     "clsx": "^2.1.1",
+    "date-fns": "^4.3.0",
     "lucide-react": "^1.16.0",
     "next": "15.5.18",
     "next-themes": "^0.4.6",
@@ -51,7 +53,8 @@
     "prettier-plugin-tailwindcss": "^0.8.0",
     "tailwindcss": "^4",
     "tsx": "^4.22.3",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.7"
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx,mjs,cjs}": [

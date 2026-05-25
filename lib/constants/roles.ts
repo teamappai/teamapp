@@ -48,3 +48,17 @@ export function licenseRequired(role: UserRole): boolean {
 export function showsBrokerageInfo(role: UserRole): boolean {
   return role === "agent" || role === "team_lead";
 }
+
+/**
+ * Resolve a role-aware page title (audit F-025). Pages whose data scope differs
+ * by role must title themselves accordingly — e.g. Deals reads "All Deals" for
+ * super_admin but "My Deals" for an agent. Provide a per-role map plus a
+ * fallback for any role not explicitly listed.
+ */
+export function scopedTitle(
+  role: UserRole,
+  map: Partial<Record<UserRole, string>>,
+  fallback: string,
+): string {
+  return map[role] ?? fallback;
+}
