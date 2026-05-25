@@ -1,0 +1,139 @@
+import type { UserRole } from "@/lib/constants/roles";
+
+/**
+ * Sidebar navigation — the single source of truth for which items each role
+ * sees (audit CR-7). Filtering happens here, server-side, off the verified
+ * session role; the client never decides its own menu, and the data layer (RLS)
+ * independently rejects any out-of-scope request.
+ *
+ * Icons are referenced by string key (see `components/layout/nav-icons.tsx`) so
+ * the computed item list stays serializable across the server→client boundary.
+ */
+
+export type NavIconKey =
+  | "adminHome"
+  | "dashboard"
+  | "companies"
+  | "users"
+  | "coaching"
+  | "deals"
+  | "requests"
+  | "training"
+  | "messages"
+  | "managementHub"
+  | "featureFlags"
+  | "auditLog"
+  | "billing"
+  | "activityLog";
+
+export type NavItem = {
+  href: string;
+  label: string;
+  icon: NavIconKey;
+  /** Match the pathname exactly (used for "home" items that prefix others). */
+  exact?: boolean;
+};
+
+export type SidebarCta = {
+  href: string;
+  label: string;
+  /** "plus" prepends a leading + icon. */
+  icon?: "plus" | "deal" | "invite";
+};
+
+const NAV_BY_ROLE: Record<UserRole, NavItem[]> = {
+  super_admin: [
+    { href: "/app/admin", label: "Admin Home", icon: "adminHome", exact: true },
+    { href: "/app/admin/companies", label: "Companies", icon: "companies" },
+    { href: "/app/admin/users", label: "Users", icon: "users" },
+    { href: "/app/admin/coaching", label: "Coaching", icon: "coaching" },
+    { href: "/app/admin/deals", label: "Deals", icon: "deals" },
+    { href: "/app/admin/requests", label: "Requests", icon: "requests" },
+    {
+      href: "/app/admin/management",
+      label: "Management Hub",
+      icon: "managementHub",
+    },
+    {
+      href: "/app/admin/feature-flags",
+      label: "Feature Flags",
+      icon: "featureFlags",
+    },
+    { href: "/app/admin/audit-log", label: "Audit Log", icon: "auditLog" },
+    { href: "/app/admin/billing", label: "Billing", icon: "billing" },
+  ],
+  team_lead: [
+    {
+      href: "/app/dashboard",
+      label: "Dashboard",
+      icon: "dashboard",
+      exact: true,
+    },
+    { href: "/app/coaching", label: "Coaching", icon: "coaching" },
+    { href: "/app/deals", label: "Deals", icon: "deals" },
+    { href: "/app/requests", label: "Requests", icon: "requests" },
+    { href: "/app/training", label: "Training", icon: "training" },
+    { href: "/app/messages", label: "Messages", icon: "messages" },
+    { href: "/app/users", label: "Users", icon: "users" },
+    { href: "/app/management", label: "Management Hub", icon: "managementHub" },
+    { href: "/app/billing", label: "Billing", icon: "billing" },
+  ],
+  agent: [
+    {
+      href: "/app/dashboard",
+      label: "Dashboard",
+      icon: "dashboard",
+      exact: true,
+    },
+    { href: "/app/coaching", label: "Coaching", icon: "coaching" },
+    { href: "/app/deals", label: "Deals", icon: "deals" },
+    { href: "/app/requests", label: "Requests", icon: "requests" },
+    { href: "/app/training", label: "Training", icon: "training" },
+    { href: "/app/messages", label: "Messages", icon: "messages" },
+    { href: "/app/activity", label: "Activity Log", icon: "activityLog" },
+  ],
+  admin_tc: [
+    {
+      href: "/app/dashboard",
+      label: "Dashboard",
+      icon: "dashboard",
+      exact: true,
+    },
+    { href: "/app/requests", label: "Requests", icon: "requests" },
+    { href: "/app/deals", label: "Deals", icon: "deals" },
+    { href: "/app/training", label: "Training", icon: "training" },
+    { href: "/app/messages", label: "Messages", icon: "messages" },
+  ],
+  marketing: [
+    {
+      href: "/app/dashboard",
+      label: "Dashboard",
+      icon: "dashboard",
+      exact: true,
+    },
+    { href: "/app/requests", label: "Requests", icon: "requests" },
+    { href: "/app/training", label: "Training", icon: "training" },
+    { href: "/app/messages", label: "Messages", icon: "messages" },
+  ],
+};
+
+const CTA_BY_ROLE: Partial<Record<UserRole, SidebarCta>> = {
+  agent: { href: "/app/deals/new", label: "Submit a deal", icon: "deal" },
+  team_lead: {
+    href: "/app/users/invite",
+    label: "Invite agent",
+    icon: "invite",
+  },
+  admin_tc: { href: "/app/requests/new", label: "New Request", icon: "plus" },
+  marketing: { href: "/app/requests/new", label: "New Request", icon: "plus" },
+};
+
+/** The nav items a given role is allowed to see. */
+export function navForRole(role: UserRole): NavItem[] {
+  return NAV_BY_ROLE[role];
+}
+
+/** The sidebar primary CTA for a role, or null when the role has none. */
+export function ctaForRole(role: UserRole): SidebarCta | null {
+  return CTA_BY_ROLE[role] ?? null;
+}
