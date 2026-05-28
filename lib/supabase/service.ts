@@ -1,5 +1,6 @@
 import "server-only";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/types/supabase";
 
 /**
  * Service-role Supabase client. Bypasses Row Level Security — use ONLY in
@@ -8,7 +9,7 @@ import { createClient as createSupabaseClient } from "@supabase/supabase-js";
  * time, and an ESLint rule additionally bans it inside /components.
  */
 export function createServiceClient() {
-  return createSupabaseClient(
+  return createSupabaseClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     {

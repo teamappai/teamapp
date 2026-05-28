@@ -42,25 +42,15 @@ export type SidebarCta = {
 };
 
 const NAV_BY_ROLE: Record<UserRole, NavItem[]> = {
+  // Phase 5 ships the super-admin console below. Other admin areas (coaching,
+  // deals, management, billing) arrive in later phases and are added here then,
+  // so the sidebar never links to a route that doesn't exist yet.
   super_admin: [
     { href: "/app/admin", label: "Admin Home", icon: "adminHome", exact: true },
     { href: "/app/admin/companies", label: "Companies", icon: "companies" },
     { href: "/app/admin/users", label: "Users", icon: "users" },
-    { href: "/app/admin/coaching", label: "Coaching", icon: "coaching" },
-    { href: "/app/admin/deals", label: "Deals", icon: "deals" },
-    { href: "/app/admin/requests", label: "Requests", icon: "requests" },
-    {
-      href: "/app/admin/management",
-      label: "Management Hub",
-      icon: "managementHub",
-    },
-    {
-      href: "/app/admin/feature-flags",
-      label: "Feature Flags",
-      icon: "featureFlags",
-    },
-    { href: "/app/admin/audit-log", label: "Audit Log", icon: "auditLog" },
-    { href: "/app/admin/billing", label: "Billing", icon: "billing" },
+    { href: "/app/admin/flags", label: "Feature Flags", icon: "featureFlags" },
+    { href: "/app/admin/audit", label: "Audit Log", icon: "auditLog" },
   ],
   team_lead: [
     {

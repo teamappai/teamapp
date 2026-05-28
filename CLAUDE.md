@@ -44,6 +44,12 @@ Annual billing is ~20% off 12× monthly. Stripe price IDs in `plans.ts` are
 | Lint / format   | ESLint (Next preset) + Prettier (+ Tailwind plugin)         |
 | Git hooks       | Husky + lint-staged (pre-commit: eslint --fix + prettier)   |
 
+## Local dev environment
+
+- Node 22.13+ required (pnpm 11 dependency)
+- pnpm: per package.json's packageManager field
+- Mac dev tip: nvm install 22 && nvm use 22
+
 ## Directory layout
 
 ```
