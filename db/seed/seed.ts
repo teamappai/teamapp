@@ -163,6 +163,7 @@ async function main(): Promise<void> {
     full_name: "Philip Kang SA",
     role: "super_admin",
     status: "active",
+    last_active_at: new Date().toISOString(),
   });
 
   // 2) company — seat count comes from the canonical plan, not a literal.
@@ -211,6 +212,7 @@ async function main(): Promise<void> {
     "marketing",
   );
 
+  const now = new Date().toISOString();
   await upsertProfile({
     id: teamLeadId,
     company_id: companyId,
@@ -218,6 +220,7 @@ async function main(): Promise<void> {
     full_name: "Phil",
     role: "team_lead",
     status: "active",
+    last_active_at: now,
   });
   await upsertProfile({
     id: agentId,
@@ -227,6 +230,7 @@ async function main(): Promise<void> {
     role: "agent",
     license_number: "DRE #01999888",
     status: "active",
+    last_active_at: now,
   });
   await upsertProfile({
     id: adminTcId,
@@ -235,6 +239,7 @@ async function main(): Promise<void> {
     full_name: "Rochie Ramiro",
     role: "admin_tc",
     status: "active",
+    last_active_at: now,
   });
   await upsertProfile({
     id: marketingId,
@@ -243,6 +248,7 @@ async function main(): Promise<void> {
     full_name: "Krisha Ortega",
     role: "marketing",
     status: "active",
+    last_active_at: now,
   });
   console.log("• Users: 1 super_admin + 4 company members");
 
@@ -553,6 +559,47 @@ async function main(): Promise<void> {
   });
   die("insert coaching_log_entry", coachErr);
   console.log("• Coaching log: 1 entry");
+
+  // 12) platform feature flags (Phase 5 editor). Seeded disabled; consuming code
+  // lands in later phases. Upsert by key so re-seeding is idempotent and never
+  // clobbers an operator's toggles beyond re-asserting the canonical description.
+  const featureFlags: Array<{ key: string; description: string }> = [
+    {
+      key: "flag_role_based_sections",
+      description: "Role-scoped training section visibility.",
+    },
+    {
+      key: "flag_training_dashboard",
+      description: "New training progress dashboard.",
+    },
+    {
+      key: "flag_drag_drop_reorder",
+      description: "Drag-and-drop reordering of sections/modules.",
+    },
+    {
+      key: "flag_redesigned_requests",
+      description: "Redesigned requests queue UX.",
+    },
+    {
+      key: "flag_lightweight_coaching",
+      description: "Lightweight coaching log experience.",
+    },
+    {
+      key: "flag_team_lead_dashboard_v2",
+      description: "Rebuilt team-lead dashboard (Phase 13).",
+    },
+    { key: "flag_new_billing_ux", description: "New billing UX (Phase 12)." },
+  ];
+  for (const f of featureFlags) {
+    const { error } = await admin
+      .from("feature_flags")
+      .upsert(
+        { key: f.key, description: f.description },
+        { onConflict: "key", ignoreDuplicates: true },
+      );
+    die(`upsert feature_flag ${f.key}`, error);
+  }
+  console.log(`• Feature flags: ${featureFlags.length} seeded`);
 
   // ── credentials report ──────────────────────────────────────────────────────
   console.log("\n────────────────────────────────────────────────────────");

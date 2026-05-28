@@ -56,6 +56,17 @@ export async function updateSession(request: NextRequest) {
     return response;
   };
 
+  // Rewrite (URL unchanged) to a 403 page, carrying forward rotated cookies.
+  const forbid = (path: string) => {
+    const response = NextResponse.rewrite(new URL(path, request.url), {
+      status: 403,
+    });
+    for (const cookie of supabaseResponse.cookies.getAll()) {
+      response.cookies.set(cookie);
+    }
+    return response;
+  };
+
   if (!user) {
     if (isAppRoute) {
       const next = encodeURIComponent(pathname + search);
@@ -75,6 +86,15 @@ export async function updateSession(request: NextRequest) {
 
   if (isAuthEntry && role) {
     return redirectTo(roleHomePath(role));
+  }
+
+  // The super-admin console is gated to super_admins. Non-super_admins (and a
+  // super_admin while impersonating, whose active role is the target's) get a
+  // 403 "Not authorized" page — an explicit rewrite, not a redirect (audit
+  // CR-4 / F-012). The admin pages/actions independently re-check via
+  // requireSuperAdmin before touching the service-role client.
+  if (pathname.startsWith("/app/admin") && role !== "super_admin") {
+    return forbid("/not-authorized");
   }
 
   if (

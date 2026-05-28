@@ -1,10 +1,16 @@
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/server";
 import { getSessionProfile } from "@/lib/auth/profile";
 import { ctaForRole, navForRole } from "@/lib/constants/nav";
 import { getOnboardingProgress } from "@/lib/training/progress";
+import {
+  IMPERSONATION_ADMIN_ID_COOKIE,
+  verifyValue,
+} from "@/lib/auth/impersonation";
 import { AppShell } from "@/components/layout/app-shell";
+import { ImpersonationBanner } from "@/components/admin/impersonation-banner";
 import type { SidebarData } from "@/components/layout/sidebar-content";
 import type { HeaderIdentity } from "@/components/layout/header";
 
@@ -60,9 +66,20 @@ export default async function AppLayout({
     seed: profile.id,
   };
 
+  // Show the persistent impersonation banner when a super_admin is acting as
+  // this (impersonated) user. The signed cookie can't be forged by the target.
+  const impersonating =
+    verifyValue((await cookies()).get(IMPERSONATION_ADMIN_ID_COOKIE)?.value) !==
+    null;
+
   return (
-    <AppShell sidebar={sidebar} identity={identity}>
-      {children}
-    </AppShell>
+    <>
+      {impersonating ? (
+        <ImpersonationBanner name={profile.full_name ?? profile.email} />
+      ) : null}
+      <AppShell sidebar={sidebar} identity={identity}>
+        {children}
+      </AppShell>
+    </>
   );
 }
