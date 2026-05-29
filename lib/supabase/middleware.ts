@@ -97,13 +97,14 @@ export async function updateSession(request: NextRequest) {
     return forbid("/not-authorized");
   }
 
-  // The Users page and Management Hub are team-lead surfaces, gated to team_lead
-  // and super_admin. agent / admin_tc / marketing get a 403. The pages/actions
-  // independently re-check via requireTeamLead before touching the service-role
-  // client.
+  // The Users page, Management Hub, and the training progress dashboard are
+  // team-lead surfaces, gated to team_lead and super_admin (PA-2). agent /
+  // admin_tc / marketing get a 403. The pages/actions independently re-check via
+  // requireTeamLead before touching the service-role client.
   if (
     (pathname.startsWith("/app/users") ||
-      pathname.startsWith("/app/management")) &&
+      pathname.startsWith("/app/management") ||
+      pathname.startsWith("/app/training/progress")) &&
     role !== "team_lead" &&
     role !== "super_admin"
   ) {

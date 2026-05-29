@@ -47,7 +47,12 @@ export default async function AppLayout({
   let onboarding: SidebarData["onboarding"] = null;
   if (role === "agent") {
     const supabase = await createClient();
-    onboarding = await getOnboardingProgress(supabase, profile.id);
+    onboarding = await getOnboardingProgress(
+      supabase,
+      profile.id,
+      role,
+      profile.company_id,
+    );
   }
 
   const sidebar: SidebarData = {

@@ -99,3 +99,15 @@ export function formatNumber(value: number): string {
   const safe = Number.isFinite(value) ? value : 0;
   return new Intl.NumberFormat("en-US").format(safe);
 }
+
+/** Human-readable file size: 1024 -> "1 KB", 1536000 -> "1.5 MB". */
+export function formatBytes(bytes: number): string {
+  if (!Number.isFinite(bytes) || bytes <= 0) return "0 B";
+  const units = ["B", "KB", "MB", "GB"];
+  const exp = Math.min(
+    Math.floor(Math.log(bytes) / Math.log(1024)),
+    units.length - 1,
+  );
+  const value = bytes / 1024 ** exp;
+  return `${exp === 0 ? value : trimZero(value)} ${units[exp]}`;
+}

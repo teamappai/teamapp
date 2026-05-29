@@ -250,7 +250,26 @@ async function main(): Promise<void> {
     status: "active",
     last_active_at: now,
   });
-  console.log("• Users: 1 super_admin + 4 company members");
+
+  // Extra agents who went quiet weeks ago. They push the "agent" role over the
+  // >=3 stalled threshold in two sections so the dashboard alert banner (PA-2)
+  // is demonstrable. Their stalled progress rows are seeded below.
+  const stalledAgentIds: string[] = [];
+  for (const n of [1, 2, 3]) {
+    const email = `stalled-agent-${n}@homereadyteam.com`;
+    const id = await ensureAuthUser(email, `Stalled Agent ${n}`, "agent");
+    await upsertProfile({
+      id,
+      company_id: companyId,
+      email,
+      full_name: `Stalled Agent ${n}`,
+      role: "agent",
+      status: "active",
+      last_active_at: now,
+    });
+    stalledAgentIds.push(id);
+  }
+  console.log("• Users: 1 super_admin + 7 company members");
 
   // ── clear this company's sample data for a clean re-seed ────────────────────
   await admin.from("training_sections").delete().eq("company_id", companyId);
@@ -280,6 +299,8 @@ async function main(): Promise<void> {
     },
   ];
 
+  // Captured per section so we can seed realistic per-user progress below.
+  const moduleIdsByTitle = new Map<string, string[]>();
   for (const spec of sectionSpecs) {
     const { data: section, error: secErr } = await admin
       .from("training_sections")
@@ -309,12 +330,78 @@ async function main(): Promise<void> {
         visible_to_roles: [],
       }),
     );
-    const { error: modErr } = await admin
+    const { data: insertedModules, error: modErr } = await admin
       .from("training_modules")
-      .insert(modules);
+      .insert(modules)
+      .select("id, position");
     die(`insert modules for ${spec.title}`, modErr);
+    moduleIdsByTitle.set(
+      spec.title,
+      (insertedModules ?? [])
+        .sort((a, b) => a.position - b.position)
+        .map((m) => m.id),
+    );
   }
   console.log("• Training: 3 sections × 3 modules");
+
+  // ── sample per-user progress so the learner view + progress dashboard have
+  // meaningful data (completed / in-progress / stalled). Timestamps in the past
+  // exercise the 14-day "stalled" threshold (PA-2).
+  const tsAgo = (days: number): string =>
+    new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+
+  const onboarding = moduleIdsByTitle.get("Company Onboarding") ?? [];
+  const sales = moduleIdsByTitle.get("Agent Sales Mastery") ?? [];
+  const ops = moduleIdsByTitle.get("Ops & Marketing Playbook") ?? [];
+
+  type ProgressSeed = Tables["training_progress"]["Insert"];
+  const progressRows: ProgressSeed[] = [];
+  const completed = (uid: string, mid: string, days: number): ProgressSeed => ({
+    user_id: uid,
+    module_id: mid,
+    status: "completed",
+    started_at: tsAgo(days + 2),
+    completed_at: tsAgo(days),
+    last_viewed_at: tsAgo(days),
+  });
+  const inProgress = (
+    uid: string,
+    mid: string,
+    days: number,
+  ): ProgressSeed => ({
+    user_id: uid,
+    module_id: mid,
+    status: "in_progress",
+    started_at: tsAgo(days + 1),
+    last_viewed_at: tsAgo(days),
+  });
+
+  // Agent Phil: finished onboarding, mid-way (recently) through sales.
+  if (onboarding[0]) progressRows.push(completed(agentId, onboarding[0], 10));
+  if (onboarding[1]) progressRows.push(completed(agentId, onboarding[1], 8));
+  if (sales[0]) progressRows.push(inProgress(agentId, sales[0], 2));
+  // Admin/TC: started onboarding but went quiet 20 days ago (stalled).
+  if (onboarding[0])
+    progressRows.push(inProgress(adminTcId, onboarding[0], 20));
+  // Three extra agents stalled in two sections → trips the >=3 alert banner for
+  // both agent·Company Onboarding and agent·Agent Sales Mastery.
+  for (const uid of stalledAgentIds) {
+    if (onboarding[0]) progressRows.push(inProgress(uid, onboarding[0], 20));
+    if (sales[0]) progressRows.push(inProgress(uid, sales[0], 18));
+  }
+  // Marketing: knocked out the whole onboarding section.
+  for (const mid of onboarding)
+    progressRows.push(completed(marketingId, mid, 5));
+  // Marketing started the ops playbook recently.
+  if (ops[0]) progressRows.push(inProgress(marketingId, ops[0], 1));
+
+  if (progressRows.length) {
+    const { error: progErr } = await admin
+      .from("training_progress")
+      .insert(progressRows);
+    die("insert training_progress", progErr);
+  }
+  console.log(`• Training progress: ${progressRows.length} rows`);
 
   // deal types
   const { data: dealTypes, error: dtErr } = await admin
