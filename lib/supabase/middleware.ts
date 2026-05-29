@@ -97,6 +97,19 @@ export async function updateSession(request: NextRequest) {
     return forbid("/not-authorized");
   }
 
+  // The Users page and Management Hub are team-lead surfaces, gated to team_lead
+  // and super_admin. agent / admin_tc / marketing get a 403. The pages/actions
+  // independently re-check via requireTeamLead before touching the service-role
+  // client.
+  if (
+    (pathname.startsWith("/app/users") ||
+      pathname.startsWith("/app/management")) &&
+    role !== "team_lead" &&
+    role !== "super_admin"
+  ) {
+    return forbid("/not-authorized");
+  }
+
   if (
     isAppRoute &&
     role === "super_admin" &&

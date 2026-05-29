@@ -43,7 +43,11 @@ export default async function SignupPage({
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <SignupForm token={token!} email={invitation.email} />
+        <SignupForm
+          token={token!}
+          email={invitation.email}
+          fullName={invitation.full_name ?? ""}
+        />
       </CardContent>
     </Card>
   );

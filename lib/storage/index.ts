@@ -21,6 +21,7 @@ export const BUCKETS = {
   dealFiles: "deal-files",
   requestFiles: "request-files",
   messageAttachments: "message-attachments",
+  moduleContent: "module-content",
 } as const;
 
 const DEFAULT_SIGNED_URL_TTL = 60 * 60; // 1 hour
@@ -212,4 +213,45 @@ export function uploadCompanyLogo(
 
 export function getCompanyLogoUrl(client: DbClient, path: string): string {
   return publicUrl(client, BUCKETS.companyLogos, path);
+}
+
+// ── module content (private; images + attachments embedded in modules) ────────
+export function moduleContentPath(
+  companyId: string,
+  sectionId: string,
+  moduleId: string,
+  filename: string,
+): string {
+  return `${companyId}/${sectionId}/${moduleId}/${uniqueName(filename)}`;
+}
+
+export function uploadModuleContent(
+  client: DbClient,
+  args: {
+    companyId: string;
+    sectionId: string;
+    moduleId: string;
+    filename: string;
+    file: UploadInput;
+  },
+): Promise<UploadResult> {
+  return uploadViaSignedUrl(
+    client,
+    BUCKETS.moduleContent,
+    moduleContentPath(
+      args.companyId,
+      args.sectionId,
+      args.moduleId,
+      args.filename,
+    ),
+    args.file,
+  );
+}
+
+export function getModuleContentUrl(
+  client: DbClient,
+  path: string,
+  expiresIn?: number,
+): Promise<string> {
+  return signedUrl(client, BUCKETS.moduleContent, path, expiresIn);
 }
