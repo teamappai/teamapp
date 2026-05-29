@@ -119,6 +119,15 @@ function ModuleItem({
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuItem onClick={onEdit}>Edit</DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <a
+              href={`/app/training/${module.id}?preview=1`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Preview as agent
+            </a>
+          </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem variant="destructive" onClick={onArchive}>
             Archive

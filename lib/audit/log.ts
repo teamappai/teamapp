@@ -19,7 +19,8 @@ export type AuditAction =
   | "feature_flag_toggled"
   | "feature_flag_companies_updated"
   | "super_admin_note_created"
-  | "super_admin_note_deleted";
+  | "super_admin_note_deleted"
+  | "training_nudge_sent";
 
 export type AuditResourceType = "company" | "user" | "feature_flag" | "note";
 

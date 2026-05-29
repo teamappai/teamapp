@@ -15,6 +15,7 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   feature_flag_companies_updated: "Updated flag overrides",
   super_admin_note_created: "Added note",
   super_admin_note_deleted: "Deleted note",
+  training_nudge_sent: "Sent training nudge",
 };
 
 export function auditActionLabel(action: string): string {

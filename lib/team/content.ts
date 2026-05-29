@@ -85,6 +85,67 @@ export function findPlaceholders(blocks: ContentBlock[]): string[] {
   return [...found];
 }
 
+// ── emoji in titles (F-046) ───────────────────────────────────────────────────
+// Pictographic emoji (excludes ordinary punctuation/symbols like ™ via the
+// Extended_Pictographic property). Titles must read as plain professional text.
+const EMOJI = /\p{Extended_Pictographic}/u;
+
+/** True when the string contains at least one emoji (titles must not). */
+export function hasEmoji(text: string): boolean {
+  return EMOJI.test(text);
+}
+
+// ── spell-check (CR-11) ───────────────────────────────────────────────────────
+/**
+ * Small custom dictionary of common misspellings → the correction. Checked
+ * against module titles and content before publish. Deliberately tiny and
+ * high-confidence (no general spell-checker): every entry here is a word we'd
+ * be embarrassed to ship. "Acccepting" is called out explicitly in the spec.
+ */
+const MISSPELLINGS: Record<string, string> = {
+  acccepting: "accepting",
+  accross: "across",
+  agressive: "aggressive",
+  apparant: "apparent",
+  begining: "beginning",
+  beleive: "believe",
+  calender: "calendar",
+  commited: "committed",
+  definately: "definitely",
+  occured: "occurred",
+  recieve: "receive",
+  refered: "referred",
+  seperate: "separate",
+  succesful: "successful",
+  teh: "the",
+  untill: "until",
+};
+
+/**
+ * Returns misspelled words found in a raw string (HTML stripped), each rendered
+ * as `"misspelled" → "correction"`. Empty = clean.
+ */
+export function findMisspellings(raw: string): string[] {
+  const text = stripTags(raw);
+  const found = new Set<string>();
+  for (const word of text.toLowerCase().match(/[a-z]+/g) ?? []) {
+    const fix = MISSPELLINGS[word];
+    if (fix) found.add(`"${word}" → "${fix}"`);
+  }
+  return [...found];
+}
+
+/** Scan every text-bearing block for misspellings (publish gate, CR-11). */
+export function findContentMisspellings(blocks: ContentBlock[]): string[] {
+  const found = new Set<string>();
+  for (const block of blocks) {
+    for (const raw of blockText(block)) {
+      for (const hit of findMisspellings(raw)) found.add(hit);
+    }
+  }
+  return [...found];
+}
+
 // ── sanitize (F-074) ──────────────────────────────────────────────────────────
 /** Strip stray highlight/background formatting leftover from pasted content. */
 export function sanitizeHtml(html: string): string {

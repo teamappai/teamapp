@@ -46,6 +46,9 @@ import {
   findPlaceholders,
   scanPlaceholders,
   parseBlocks,
+  hasEmoji,
+  findMisspellings,
+  findContentMisspellings,
 } from "@/lib/team/content";
 
 export type ActionResult =
@@ -67,12 +70,27 @@ export async function saveSection(
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid." };
   }
 
+  if (hasEmoji(parsed.data.title)) {
+    return { ok: false, error: "Remove emojis from the title (F-046)." };
+  }
+
   const placeholders = scanPlaceholders(parsed.data.title);
   if (placeholders.length) {
     return {
       ok: false,
       error: `Remove placeholder text from the title: ${placeholders.join(", ")}`,
     };
+  }
+
+  // Spell-check the title before it goes live (CR-11).
+  if (parsed.data.status === "published") {
+    const misspelled = findMisspellings(parsed.data.title);
+    if (misspelled.length) {
+      return {
+        ok: false,
+        error: `Fix spelling in the title before publishing: ${misspelled.join(", ")}`,
+      };
+    }
   }
 
   const result = input.id
@@ -120,6 +138,10 @@ export async function saveModule(
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid." };
   }
 
+  if (hasEmoji(parsed.data.title)) {
+    return { ok: false, error: "Remove emojis from the title (F-046)." };
+  }
+
   // Sanitize stray formatting (F-074), then block placeholders (F-073, CR-2).
   const blocks = sanitizeBlocks(parseBlocks(input.content));
   const placeholders = [
@@ -133,6 +155,22 @@ export async function saveModule(
       ok: false,
       error: `Remove placeholder text before saving: ${placeholders.join(", ")}`,
     };
+  }
+
+  // Spell-check title + content before publishing (CR-11) — blocks "Acccepting".
+  if (parsed.data.status === "published") {
+    const misspelled = [
+      ...new Set([
+        ...findMisspellings(parsed.data.title),
+        ...findContentMisspellings(blocks),
+      ]),
+    ];
+    if (misspelled.length) {
+      return {
+        ok: false,
+        error: `Fix spelling before publishing: ${misspelled.join(", ")}`,
+      };
+    }
   }
 
   const payload = {
