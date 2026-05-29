@@ -19,11 +19,19 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
-export function SignupForm({ token, email }: { token: string; email: string }) {
+export function SignupForm({
+  token,
+  email,
+  fullName = "",
+}: {
+  token: string;
+  email: string;
+  fullName?: string;
+}) {
   const router = useRouter();
   const form = useForm<SignupInput>({
     resolver: zodResolver(signupSchema),
-    defaultValues: { fullName: "", password: "", confirmPassword: "" },
+    defaultValues: { fullName, password: "", confirmPassword: "" },
   });
 
   async function onSubmit(values: SignupInput) {
