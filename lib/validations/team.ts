@@ -105,4 +105,7 @@ export const dealStageSchema = z
 export const requestTypeSchema = z.object({
   name: z.string().trim().min(1, "Name is required.").max(120),
   defaultAssigneeRole: userRole.nullable(),
+  category: z
+    .enum(["agent_support", "field_work", "transaction_admin", "other"])
+    .default("other"),
 });

@@ -13,6 +13,7 @@ import { AppShell } from "@/components/layout/app-shell";
 import { ImpersonationBanner } from "@/components/admin/impersonation-banner";
 import type { SidebarData } from "@/components/layout/sidebar-content";
 import type { HeaderIdentity } from "@/components/layout/header";
+import type { NotificationItem } from "@/components/layout/notification-bell";
 
 /**
  * Authenticated app shell (Phase 3). Server Component: resolves the verified
@@ -71,6 +72,28 @@ export default async function AppLayout({
     seed: profile.id,
   };
 
+  // In-app notifications for the header bell (Phase 9 / PA-2).
+  const notifSupabase = await createClient();
+  const { data: notifRows } = await notifSupabase
+    .from("notifications")
+    .select("id, kind, payload, read_at, created_at")
+    .eq("user_id", profile.id)
+    .order("created_at", { ascending: false })
+    .limit(15);
+  const notifications: NotificationItem[] = (notifRows ?? []).map((n) => {
+    const p = (n.payload ?? {}) as Record<string, unknown>;
+    return {
+      id: n.id,
+      kind: n.kind,
+      requestId: (p.request_id as string | undefined) ?? null,
+      requestTitle: (p.request_title as string | undefined) ?? null,
+      byName: (p.by_name as string | undefined) ?? null,
+      claimed: p.claimed === true,
+      read: n.read_at !== null,
+      createdAt: n.created_at,
+    };
+  });
+
   // Show the persistent impersonation banner when a super_admin is acting as
   // this (impersonated) user. The signed cookie can't be forged by the target.
   const impersonating =
@@ -82,7 +105,11 @@ export default async function AppLayout({
       {impersonating ? (
         <ImpersonationBanner name={profile.full_name ?? profile.email} />
       ) : null}
-      <AppShell sidebar={sidebar} identity={identity}>
+      <AppShell
+        sidebar={sidebar}
+        identity={identity}
+        notifications={notifications}
+      >
         {children}
       </AppShell>
     </>

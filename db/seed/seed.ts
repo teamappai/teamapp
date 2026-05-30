@@ -524,39 +524,56 @@ async function main(): Promise<void> {
   die("insert deals", dealErr);
   console.log("• Deals: 5 across stages");
 
-  // request types (smart-assignment defaults)
+  // request types (smart-assignment defaults + workflow category — Phase 9)
+  const requestTypeSpecs: Array<{
+    name: string;
+    category: "agent_support" | "field_work" | "transaction_admin" | "other";
+    role: UserRole | null;
+  }> = [
+    { name: "Flyer Design", category: "agent_support", role: "marketing" },
+    { name: "Listing Brochure", category: "agent_support", role: "marketing" },
+    { name: "Social Media Post", category: "agent_support", role: "marketing" },
+    { name: "MLS Update", category: "transaction_admin", role: "admin_tc" },
+    { name: "Showing", category: "field_work", role: "agent" },
+    { name: "Open House", category: "field_work", role: "agent" },
+    { name: "Lockbox Install", category: "field_work", role: "agent" },
+    { name: "Meet Appraiser", category: "field_work", role: "agent" },
+    {
+      name: "Home Inspection Attendance",
+      category: "field_work",
+      role: "agent",
+    },
+    { name: "AVID Completion", category: "transaction_admin", role: "agent" },
+    {
+      name: "Paperwork Signature",
+      category: "transaction_admin",
+      role: "agent",
+    },
+    { name: "Other", category: "other", role: null },
+  ];
   const { data: reqTypes, error: rtErr } = await admin
     .from("request_types")
-    .insert([
-      {
+    .insert(
+      requestTypeSpecs.map((t, i) => ({
         company_id: companyId,
-        name: "Flyer Design",
-        default_assignee_role: "marketing",
-        position: 0,
-      },
-      {
-        company_id: companyId,
-        name: "Showing",
-        default_assignee_role: "admin_tc",
-        position: 1,
-      },
-      {
-        company_id: companyId,
-        name: "MLS Listing Entry",
-        default_assignee_role: "admin_tc",
-        position: 2,
-      },
-    ])
+        name: t.name,
+        category: t.category,
+        default_assignee_role: t.role,
+        position: i,
+      })),
+    )
     .select();
   die("insert request_types", rtErr);
+  const typeId = (name: string) => reqTypes!.find((t) => t.name === name)!.id;
 
-  // 9) three requests in different states
+  // 9) sample requests across categories + statuses (incl. an unclaimed
+  // marketing-queue item for the Claim flow, and one Ready for Review).
   const requestRows: Tables["requests"]["Insert"][] = [
     {
       company_id: companyId,
-      request_type_id: reqTypes![0].id,
-      title: "Just-listed flyer for 123 Maple St",
-      description: "Need a flyer by end of week.",
+      request_type_id: typeId("Flyer Design"),
+      title: "Flyer for 123 Maple St open house",
+      description: "Need a just-listed flyer by end of week.",
       status: "pending",
       priority: "normal",
       created_by: agentId,
@@ -565,31 +582,56 @@ async function main(): Promise<void> {
     },
     {
       company_id: companyId,
-      request_type_id: reqTypes![1].id,
-      title: "Schedule showing for 55 Oak Ave",
+      request_type_id: typeId("Social Media Post"),
+      title: "Instagram post for new Birch Blvd listing",
+      description: "Carousel of the 3 best photos + price.",
+      status: "pending",
+      priority: "high",
+      created_by: agentId,
+      assigned_to_role: "marketing",
+      assigned_to_user_id: null, // unclaimed marketing queue → Claim test
+    },
+    {
+      company_id: companyId,
+      request_type_id: typeId("Showing"),
+      title: "Cover showing at 55 Oak Ave Saturday 2pm",
       description: "Buyer wants Saturday afternoon.",
       status: "in_progress",
       priority: "high",
-      created_by: agentId,
-      assigned_to_role: "admin_tc",
-      assigned_to_user_id: adminTcId,
+      created_by: teamLeadId,
+      assigned_to_role: "agent",
+      assigned_to_user_id: agentId,
       due_date: daysAgoDate(-3),
     },
     {
       company_id: companyId,
-      request_type_id: reqTypes![2].id,
-      title: "Enter 9 Birch Blvd into MLS",
-      description: "Listing went live; record it.",
-      status: "completed",
+      request_type_id: typeId("MLS Update"),
+      title: "Update price on 9 Birch Blvd in MLS",
+      description: "Price reduced $10k; please update.",
+      status: "ready_for_review",
       priority: "normal",
       created_by: agentId,
       assigned_to_role: "admin_tc",
       assigned_to_user_id: adminTcId,
+      due_date: daysAgoDate(-1),
+    },
+    {
+      company_id: companyId,
+      request_type_id: typeId("AVID Completion"),
+      title: "Complete AVID for 742 Evergreen Terrace",
+      description: "Agent visual inspection disclosure needed.",
+      status: "completed",
+      priority: "normal",
+      created_by: adminTcId,
+      assigned_to_role: "agent",
+      assigned_to_user_id: agentId,
     },
   ];
   const { error: reqErr } = await admin.from("requests").insert(requestRows);
   die("insert requests", reqErr);
-  console.log("• Requests: 3 (pending / in_progress / completed)");
+  console.log(
+    "• Requests: 5 (pending / unclaimed / in_progress / ready_for_review / completed)",
+  );
 
   // 10) seven days of activity logs for the agent
   const activityRows: Tables["activity_logs"]["Insert"][] = [];

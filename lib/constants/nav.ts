@@ -52,6 +52,7 @@ const NAV_BY_ROLE: Record<UserRole, NavItem[]> = {
     // super_admin can view all deals across companies (F-025 "All Deals"); they
     // cannot create deals (F-031), so no CTA is wired below for this role.
     { href: "/app/deals", label: "Deals", icon: "deals" },
+    { href: "/app/requests", label: "Requests", icon: "requests" },
     { href: "/app/admin/flags", label: "Feature Flags", icon: "featureFlags" },
     { href: "/app/admin/audit", label: "Audit Log", icon: "auditLog" },
   ],
@@ -118,7 +119,7 @@ const CTA_BY_ROLE: Partial<Record<UserRole, SidebarCta>> = {
     icon: "invite",
   },
   admin_tc: { href: "/app/requests/new", label: "New Request", icon: "plus" },
-  marketing: { href: "/app/requests/new", label: "New Request", icon: "plus" },
+  // Marketing is fulfill-only and cannot create requests (F-136) — no CTA.
 };
 
 /** The nav items a given role is allowed to see. */

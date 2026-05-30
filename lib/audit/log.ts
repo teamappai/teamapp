@@ -21,14 +21,17 @@ export type AuditAction =
   | "super_admin_note_created"
   | "super_admin_note_deleted"
   | "training_nudge_sent"
-  | "deal_deleted";
+  | "deal_deleted"
+  | "request_status_changed"
+  | "request_deleted";
 
 export type AuditResourceType =
   | "company"
   | "user"
   | "feature_flag"
   | "note"
-  | "deal";
+  | "deal"
+  | "request";
 
 export type LogAuditInput = {
   actor_user_id: string;
