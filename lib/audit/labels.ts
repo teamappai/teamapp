@@ -16,6 +16,9 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   super_admin_note_created: "Added note",
   super_admin_note_deleted: "Deleted note",
   training_nudge_sent: "Sent training nudge",
+  deal_deleted: "Deleted deal",
+  request_status_changed: "Changed request status",
+  request_deleted: "Deleted request",
 };
 
 export function auditActionLabel(action: string): string {

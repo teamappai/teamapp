@@ -1289,8 +1289,68 @@ export type Database = {
           },
         ]
       }
+      request_status_changes: {
+        Row: {
+          changed_by: string | null
+          created_at: string
+          from_status: string | null
+          id: string
+          note: string | null
+          request_id: string
+          to_status: string
+        }
+        Insert: {
+          changed_by?: string | null
+          created_at?: string
+          from_status?: string | null
+          id?: string
+          note?: string | null
+          request_id: string
+          to_status: string
+        }
+        Update: {
+          changed_by?: string | null
+          created_at?: string
+          from_status?: string | null
+          id?: string
+          note?: string | null
+          request_id?: string
+          to_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "request_status_changes_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "active_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "request_status_changes_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "request_status_changes_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "active_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "request_status_changes_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       request_types: {
         Row: {
+          category: string
           company_id: string | null
           created_at: string
           default_assignee_role: Database["public"]["Enums"]["user_role"] | null
@@ -1300,6 +1360,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          category?: string
           company_id?: string | null
           created_at?: string
           default_assignee_role?:
@@ -1311,6 +1372,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          category?: string
           company_id?: string | null
           created_at?: string
           default_assignee_role?:

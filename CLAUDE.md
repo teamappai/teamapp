@@ -171,6 +171,12 @@ app origin (`NEXT_PUBLIC_APP_URL`) plus `…/auth/confirm` and `…/reset-passwo
   Phase 12). Email changes go through `updateUser({ email })` and are only
   reflected in `auth.users` on confirmation; the `public.users.email` mirror is
   not synced until a trigger/webhook keeps it current.
+- **Friendly access-denied page for `NotAuthorizedError`** (target: Phase 14
+  polish). Pages that `throw new NotAuthorizedError()` (Deals, Requests) render
+  the generic Next.js error boundary (effectively a 500) instead of a clean 403,
+  because there is no `app/app/error.tsx`. The Requests detail page already
+  bounces marketing IDOR attempts via `redirect()` as an interim; a shared error
+  boundary should render `/not-authorized` for all thrown auth errors.
 
 ### Phase 8a — AI extraction accuracy refinements (post-Phase 8)
 

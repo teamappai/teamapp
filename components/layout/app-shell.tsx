@@ -4,6 +4,7 @@ import * as React from "react";
 
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Header, type HeaderIdentity } from "@/components/layout/header";
+import type { NotificationItem } from "@/components/layout/notification-bell";
 import {
   SidebarContent,
   type SidebarData,
@@ -19,11 +20,13 @@ export function AppShell({
   sidebar,
   identity,
   unreadCount,
+  notifications,
   children,
 }: {
   sidebar: SidebarData;
   identity: HeaderIdentity;
   unreadCount?: number;
+  notifications?: NotificationItem[];
   children: React.ReactNode;
 }) {
   const [drawerOpen, setDrawerOpen] = React.useState(false);
@@ -41,6 +44,7 @@ export function AppShell({
           identity={identity}
           navItems={sidebar.navItems}
           unreadCount={unreadCount}
+          notifications={notifications}
           onMenuClick={() => setDrawerOpen(true)}
         />
         <main className="flex-1 px-4 py-6 sm:px-6">{children}</main>

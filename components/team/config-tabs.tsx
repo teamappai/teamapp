@@ -60,6 +60,21 @@ import {
 const ASSIGNEE_ROLES: UserRole[] = ["agent", "admin_tc", "marketing"];
 const UNASSIGNED = "__none__";
 
+// Workflow class — drives smart-assignment defaults on the create form (Phase 9).
+type RequestCategory =
+  | "agent_support"
+  | "field_work"
+  | "transaction_admin"
+  | "other";
+const REQUEST_CATEGORIES: { value: RequestCategory; label: string }[] = [
+  { value: "agent_support", label: "Agent Support" },
+  { value: "field_work", label: "Field Work" },
+  { value: "transaction_admin", label: "Transaction Admin" },
+  { value: "other", label: "Other" },
+];
+const categoryLabel = (c: string) =>
+  REQUEST_CATEGORIES.find((x) => x.value === c)?.label ?? "Other";
+
 function useRunner() {
   const router = useRouter();
   const [pending, start] = React.useTransition();
@@ -507,6 +522,7 @@ export function RequestTypesTab({
   const [editing, setEditing] = React.useState<RequestType | null>(null);
   const [name, setName] = React.useState("");
   const [role, setRole] = React.useState<string>(UNASSIGNED);
+  const [category, setCategory] = React.useState<RequestCategory>("other");
   const [error, setError] = React.useState<string>();
 
   React.useEffect(() => setItems(requestTypes), [requestTypes]);
@@ -521,6 +537,7 @@ export function RequestTypesTab({
     setEditing(null);
     setName("");
     setRole(UNASSIGNED);
+    setCategory("other");
     setError(undefined);
     setDialogOpen(true);
   }
@@ -528,6 +545,7 @@ export function RequestTypesTab({
     setEditing(t);
     setName(t.name);
     setRole(t.default_assignee_role ?? UNASSIGNED);
+    setCategory((t.category as RequestCategory) ?? "other");
     setError(undefined);
     setDialogOpen(true);
   }
@@ -542,6 +560,7 @@ export function RequestTypesTab({
           id: editing?.id,
           name: name.trim(),
           defaultAssigneeRole: role === UNASSIGNED ? null : (role as UserRole),
+          category,
         }),
       editing ? "Request type updated." : "Request type added.",
       () => setDialogOpen(false),
@@ -573,6 +592,7 @@ export function RequestTypesTab({
                 <TableRow>
                   <TableHead className="w-8" />
                   <TableHead>Name</TableHead>
+                  <TableHead>Category</TableHead>
                   <TableHead>Default assignee</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -584,6 +604,9 @@ export function RequestTypesTab({
                       <DragHandle label={`Reorder ${t.name}`} />
                     </TableCell>
                     <TableCell className="font-medium">{t.name}</TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {categoryLabel(t.category)}
+                    </TableCell>
                     <TableCell className="text-muted-foreground">
                       {t.default_assignee_role
                         ? ROLE_LABELS[t.default_assignee_role]
@@ -625,6 +648,24 @@ export function RequestTypesTab({
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Flyer Design"
               />
+            </div>
+            <div>
+              <Label htmlFor="rt-category">Category</Label>
+              <Select
+                value={category}
+                onValueChange={(v) => setCategory(v as RequestCategory)}
+              >
+                <SelectTrigger id="rt-category">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {REQUEST_CATEGORIES.map((c) => (
+                    <SelectItem key={c.value} value={c.value}>
+                      {c.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <Label htmlFor="rt-role">Default assignee role</Label>

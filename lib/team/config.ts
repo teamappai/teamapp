@@ -181,9 +181,16 @@ export async function listRequestTypes(
   return data ?? [];
 }
 
+export type RequestCategory =
+  | "agent_support"
+  | "field_work"
+  | "transaction_admin"
+  | "other";
+
 export type RequestTypeInput = {
   name: string;
   defaultAssigneeRole: UserRole | null;
+  category: RequestCategory;
 };
 
 export async function createRequestType(
@@ -196,6 +203,7 @@ export async function createRequestType(
     company_id: companyId,
     name: input.name.trim(),
     default_assignee_role: input.defaultAssigneeRole,
+    category: input.category,
     position,
   });
   return error ? { ok: false, error: error.message } : { ok: true };
@@ -211,6 +219,7 @@ export async function updateRequestType(
     .update({
       name: input.name.trim(),
       default_assignee_role: input.defaultAssigneeRole,
+      category: input.category,
     })
     .eq("id", id);
   return error ? { ok: false, error: error.message } : { ok: true };

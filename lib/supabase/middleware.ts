@@ -124,6 +124,13 @@ export async function updateSession(request: NextRequest) {
     }
   }
 
+  // Requests surfaces (Phase 9 / PA-4). Everyone may view; marketing is
+  // fulfill-only and cannot create (F-136). Per-request marketing visibility
+  // narrowing (F-133) is enforced in the page/queries (IDOR guard).
+  if (pathname.startsWith("/app/requests/new") && role === "marketing") {
+    return forbid("/not-authorized");
+  }
+
   if (
     isAppRoute &&
     role === "super_admin" &&

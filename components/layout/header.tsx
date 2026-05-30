@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  Bell,
   ChevronDown,
   LogOut,
   Menu,
@@ -27,6 +26,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { UserAvatar } from "@/components/shared/user-avatar";
 import { TooltipIconButton } from "@/components/shared/tooltip-icon-button";
+import {
+  NotificationBell,
+  type NotificationItem,
+} from "@/components/layout/notification-bell";
 import { ROLE_LABELS, type UserRole } from "@/lib/constants/roles";
 import { isNavItemActive } from "@/components/layout/nav-link";
 import type { NavItem } from "@/lib/constants/nav";
@@ -114,11 +117,13 @@ export function Header({
   identity,
   navItems,
   unreadCount = 0,
+  notifications = [],
   onMenuClick,
 }: {
   identity: HeaderIdentity;
   navItems: NavItem[];
   unreadCount?: number;
+  notifications?: NotificationItem[];
   /** Opens the mobile nav drawer. */
   onMenuClick?: () => void;
 }) {
@@ -153,9 +158,7 @@ export function Header({
       </div>
 
       <div className="ml-auto flex items-center gap-1">
-        <TooltipIconButton aria-label="Notifications" tooltip="Notifications">
-          <Bell className="size-5" />
-        </TooltipIconButton>
+        <NotificationBell notifications={notifications} />
 
         <div className="relative">
           <TooltipIconButton aria-label="Messages" tooltip="Messages" asChild>
