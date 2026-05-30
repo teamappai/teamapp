@@ -171,3 +171,25 @@ app origin (`NEXT_PUBLIC_APP_URL`) plus `…/auth/confirm` and `…/reset-passwo
   Phase 12). Email changes go through `updateUser({ email })` and are only
   reflected in `auth.users` on confirmation; the `public.users.email` mirror is
   not synced until a trigger/webhook keeps it current.
+
+### Phase 8a — AI extraction accuracy refinements (post-Phase 8)
+
+Backlog only — do **not** implement yet. Phase 8 ships AI contract extraction
+(OpenAI gpt-4o, PDFs rasterized to PNG pages) with per-field user confirmation
+(SR-1). These refinements raise raw accuracy:
+
+- **Contingency-period override handling** — contracts often have a pre-printed
+  default (e.g. "17 days") with a handwritten override beside it; the model
+  currently extracts the printed default. Needs prompt engineering or
+  post-processing logic.
+- **"Waived" notation detection** — when a contingency is marked waived/N/A, the
+  model returns the default value or null instead of detecting the waiver. Needs
+  a prompt enhancement.
+- **Smart paging for >10-page contracts** — the cap is currently the first 10
+  pages (`MAX_PDF_PAGES` in `lib/ai/pdf.ts`). Consider always including first 5 +
+  last 5 pages (signatures/addenda are often on the last page).
+- **Accuracy benchmarking** — build a test set of 20–30 representative
+  (anonymized) contracts with known-correct values; measure per-field extraction
+  accuracy; set an acceptance threshold.
+- **Production OCR preprocessing** — evaluate AWS Textract or Google Document AI
+  as a preprocessing step for higher production accuracy.

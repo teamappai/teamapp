@@ -111,6 +111,19 @@ export async function updateSession(request: NextRequest) {
     return forbid("/not-authorized");
   }
 
+  // Deals surfaces (Phase 8 / PA-7). Marketing never sees deal data
+  // (F-031 / F-133); creating deals excludes super_admin because it produces
+  // ambiguous ownership (F-031 — they add on-behalf-of from the company admin
+  // page instead). Pages/actions re-check via the access helpers.
+  if (pathname.startsWith("/app/deals")) {
+    if (role === "marketing") {
+      return forbid("/not-authorized");
+    }
+    if (pathname.startsWith("/app/deals/new") && role === "super_admin") {
+      return forbid("/not-authorized");
+    }
+  }
+
   if (
     isAppRoute &&
     role === "super_admin" &&

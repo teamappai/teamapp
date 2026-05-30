@@ -24,7 +24,16 @@ const LONG = new Intl.DateTimeFormat("en-US", {
 
 /** Coerce input to a Date; returns an invalid Date for unparseable input. */
 function toDate(value: Date | string): Date {
-  return value instanceof Date ? value : new Date(value);
+  if (value instanceof Date) return value;
+  // A date-only string (YYYY-MM-DD) has no timezone and denotes a calendar
+  // day — parse it as LOCAL midnight so it never shifts a day in negative-UTC
+  // timezones (e.g. a close_date of "2026-06-15" must not render as Jun 14).
+  const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (dateOnly) {
+    const [, y, m, d] = dateOnly;
+    return new Date(Number(y), Number(m) - 1, Number(d));
+  }
+  return new Date(value);
 }
 
 /**

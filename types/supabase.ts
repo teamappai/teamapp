@@ -393,6 +393,69 @@ export type Database = {
           },
         ]
       }
+      deal_comments: {
+        Row: {
+          body: string
+          created_at: string
+          deal_id: string
+          id: string
+          parent_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          deal_id: string
+          id?: string
+          parent_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          deal_id?: string
+          id?: string
+          parent_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deal_comments_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "active_deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deal_comments_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deal_comments_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "deal_comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deal_comments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "active_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deal_comments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       deal_files: {
         Row: {
           content_type: string | null
@@ -465,6 +528,7 @@ export type Database = {
           is_terminal_won: boolean
           name: string
           position: number
+          probability_pct: number
           updated_at: string
         }
         Insert: {
@@ -476,6 +540,7 @@ export type Database = {
           is_terminal_won?: boolean
           name: string
           position?: number
+          probability_pct?: number
           updated_at?: string
         }
         Update: {
@@ -487,6 +552,7 @@ export type Database = {
           is_terminal_won?: boolean
           name?: string
           position?: number
+          probability_pct?: number
           updated_at?: string
         }
         Relationships: [
@@ -568,6 +634,7 @@ export type Database = {
           gci_cents: number | null
           id: string
           inspection_contingency_days: number | null
+          is_draft: boolean
           listing_agent_id: string | null
           listing_broker: string | null
           loan_contingency_days: number | null
@@ -601,6 +668,7 @@ export type Database = {
           gci_cents?: number | null
           id?: string
           inspection_contingency_days?: number | null
+          is_draft?: boolean
           listing_agent_id?: string | null
           listing_broker?: string | null
           loan_contingency_days?: number | null
@@ -634,6 +702,7 @@ export type Database = {
           gci_cents?: number | null
           id?: string
           inspection_contingency_days?: number | null
+          is_draft?: boolean
           listing_agent_id?: string | null
           listing_broker?: string | null
           loan_contingency_days?: number | null
@@ -1900,6 +1969,7 @@ export type Database = {
           gci_cents: number | null
           id: string | null
           inspection_contingency_days: number | null
+          is_draft: boolean | null
           listing_agent_id: string | null
           listing_broker: string | null
           loan_contingency_days: number | null
@@ -1933,6 +2003,7 @@ export type Database = {
           gci_cents?: number | null
           id?: string | null
           inspection_contingency_days?: number | null
+          is_draft?: boolean | null
           listing_agent_id?: string | null
           listing_broker?: string | null
           loan_contingency_days?: number | null
@@ -1966,6 +2037,7 @@ export type Database = {
           gci_cents?: number | null
           id?: string | null
           inspection_contingency_days?: number | null
+          is_draft?: boolean | null
           listing_agent_id?: string | null
           listing_broker?: string | null
           loan_contingency_days?: number | null

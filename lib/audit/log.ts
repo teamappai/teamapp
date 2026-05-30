@@ -20,9 +20,15 @@ export type AuditAction =
   | "feature_flag_companies_updated"
   | "super_admin_note_created"
   | "super_admin_note_deleted"
-  | "training_nudge_sent";
+  | "training_nudge_sent"
+  | "deal_deleted";
 
-export type AuditResourceType = "company" | "user" | "feature_flag" | "note";
+export type AuditResourceType =
+  | "company"
+  | "user"
+  | "feature_flag"
+  | "note"
+  | "deal";
 
 export type LogAuditInput = {
   actor_user_id: string;

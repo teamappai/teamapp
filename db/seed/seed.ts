@@ -496,6 +496,7 @@ async function main(): Promise<void> {
       commission_pct: 3.0,
       listing_agent_id: agentId,
       close_date: daysAgoDate(30),
+      public_share_link_enabled: true,
       created_by: agentId,
     },
     {
@@ -515,7 +516,11 @@ async function main(): Promise<void> {
       created_by: agentId,
     },
   ];
-  const { error: dealErr } = await admin.from("deals").insert(dealRows);
+  // defaultToNull:false so rows that omit a column (e.g. public_share_link_enabled)
+  // fall back to the column DEFAULT rather than NULL on this bulk insert.
+  const { error: dealErr } = await admin
+    .from("deals")
+    .insert(dealRows, { defaultToNull: false });
   die("insert deals", dealErr);
   console.log("• Deals: 5 across stages");
 
