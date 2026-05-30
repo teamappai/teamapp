@@ -49,6 +49,9 @@ const NAV_BY_ROLE: Record<UserRole, NavItem[]> = {
     { href: "/app/admin", label: "Admin Home", icon: "adminHome", exact: true },
     { href: "/app/admin/companies", label: "Companies", icon: "companies" },
     { href: "/app/admin/users", label: "Users", icon: "users" },
+    // super_admin can view all deals across companies (F-025 "All Deals"); they
+    // cannot create deals (F-031), so no CTA is wired below for this role.
+    { href: "/app/deals", label: "Deals", icon: "deals" },
     { href: "/app/admin/flags", label: "Feature Flags", icon: "featureFlags" },
     { href: "/app/admin/audit", label: "Audit Log", icon: "auditLog" },
   ],

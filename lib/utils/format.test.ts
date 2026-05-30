@@ -19,6 +19,12 @@ describe("formatDate", () => {
   });
   it("empty string for invalid input", () =>
     expect(formatDate("not-a-date", "short")).toBe(""));
+  it("treats a date-only string as a local calendar day (no UTC off-by-one)", () => {
+    // "2026-06-15" must render as Jun 15 regardless of the runner's timezone —
+    // not Jun 14 as a naive new Date(iso) UTC parse would in negative offsets.
+    expect(formatDate("2026-06-15", "short")).toBe("Jun 15, 2026");
+    expect(formatDate("2026-06-15", "iso")).toBe("2026-06-15");
+  });
 });
 
 describe("formatCurrency", () => {
