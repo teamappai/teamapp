@@ -274,6 +274,7 @@ async function main(): Promise<void> {
   console.log("• Users: 1 super_admin + 7 company members");
 
   // ── clear this company's sample data for a clean re-seed ────────────────────
+  await admin.from("message_threads").delete().eq("company_id", companyId);
   await admin.from("training_sections").delete().eq("company_id", companyId);
   await admin.from("deals").delete().eq("company_id", companyId);
   await admin.from("requests").delete().eq("company_id", companyId);
@@ -811,6 +812,212 @@ async function main(): Promise<void> {
   ]);
   die("insert coaching_log_entry", coachErr);
   console.log("• Coaching log: 4 entries (1 flagged test)");
+
+  // 11b) Messages (Phase 11). A DM, a group, and a marketing DM — with a reply,
+  // reactions, a mention, and an attachment — plus realistic last_read_at so
+  // some threads show unread for both Phil (team_lead) and Agent Phil.
+  const msgAgo = (minutes: number): string =>
+    new Date(Date.now() - minutes * 60_000).toISOString();
+
+  async function seedThread(spec: {
+    type: "direct" | "group";
+    name: string | null;
+    createdBy: string;
+    participants: Array<{ userId: string; lastReadAt: string | null }>;
+  }): Promise<string> {
+    const { data: thread, error } = await admin
+      .from("message_threads")
+      .insert({
+        company_id: companyId,
+        type: spec.type,
+        name: spec.name,
+        created_by: spec.createdBy,
+      })
+      .select("id")
+      .single();
+    die("insert message_thread", error);
+    const { error: pErr } = await admin
+      .from("message_thread_participants")
+      .insert(
+        spec.participants.map((p) => ({
+          thread_id: thread!.id,
+          user_id: p.userId,
+          last_read_at: p.lastReadAt,
+        })),
+      );
+    die("insert message_thread_participants", pErr);
+    return thread!.id;
+  }
+
+  async function seedMessage(spec: {
+    threadId: string;
+    senderId: string;
+    body: string | null;
+    minutesAgo: number;
+    replyTo?: string | null;
+    attachments?: Array<{
+      path: string;
+      name: string;
+      size: number | null;
+      contentType: string | null;
+    }>;
+  }): Promise<string> {
+    const { data, error } = await admin
+      .from("messages")
+      .insert({
+        thread_id: spec.threadId,
+        sender_id: spec.senderId,
+        body: spec.body,
+        attachments: spec.attachments ?? [],
+        reply_to_message_id: spec.replyTo ?? null,
+        created_at: msgAgo(spec.minutesAgo),
+      })
+      .select("id")
+      .single();
+    die("insert message", error);
+    return data!.id;
+  }
+
+  async function react(messageId: string, userId: string, emoji: string) {
+    const { error } = await admin
+      .from("message_reactions")
+      .insert({ message_id: messageId, user_id: userId, emoji });
+    die("insert message_reaction", error);
+  }
+
+  // ── DM: Phil (team_lead) ↔ Agent Phil ──
+  const dmId = await seedThread({
+    type: "direct",
+    name: null,
+    createdBy: teamLeadId,
+    participants: [
+      { userId: teamLeadId, lastReadAt: msgAgo(25) }, // unread: m6 (20m)
+      { userId: agentId, lastReadAt: msgAgo(2865) }, // unread: m5 (30m)
+    ],
+  });
+  await seedMessage({
+    threadId: dmId,
+    senderId: teamLeadId,
+    body: "Hey, welcome to the team! Let me know if you have any questions.",
+    minutesAgo: 2880,
+  });
+  const dmM2 = await seedMessage({
+    threadId: dmId,
+    senderId: agentId,
+    body: "Thanks Phil! Excited to get started. **Where** do I find the onboarding docs?",
+    minutesAgo: 2875,
+  });
+  const dmM3 = await seedMessage({
+    threadId: dmId,
+    senderId: teamLeadId,
+    body: "They're under Training → Company Onboarding. Quick checklist:\n\n- Profile setup\n- Read the playbook\n- First role-play",
+    minutesAgo: 2870,
+  });
+  await seedMessage({
+    threadId: dmId,
+    senderId: teamLeadId,
+    body: `Quick nudge <@${agentId}> — you're off to a great start. Keep the momentum 🎉`,
+    minutesAgo: 30,
+  });
+  await seedMessage({
+    threadId: dmId,
+    senderId: agentId,
+    body: "Got it — working through the checklist now.",
+    minutesAgo: 20,
+    replyTo: dmM3,
+  });
+  await react(dmM2, teamLeadId, "🎉");
+
+  // ── Group: Phil + Agent Phil + Stalled Agent 1 + Rochie (admin_tc) ──
+  const groupId = await seedThread({
+    type: "group",
+    name: "Q3 Team Strategy",
+    createdBy: teamLeadId,
+    participants: [
+      { userId: teamLeadId, lastReadAt: msgAgo(60) }, // unread: g5 (15m)
+      { userId: agentId, lastReadAt: msgAgo(1428) }, // unread: g4 (1425m)
+      { userId: stalledAgentIds[0]!, lastReadAt: msgAgo(0) },
+      { userId: adminTcId, lastReadAt: msgAgo(1433) }, // unread: g3,g4,g5
+    ],
+  });
+
+  // Attachment: a tiny placeholder image uploaded to the private bucket so the
+  // signed-URL render path is exercised end to end.
+  const png = Buffer.from(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+    "base64",
+  );
+  const attachPath = `${companyId}/${groupId}/${crypto.randomUUID()}-q3-strategy.png`;
+  await admin.storage
+    .from("message-attachments")
+    .upload(attachPath, png, { contentType: "image/png", upsert: true });
+
+  const g1 = await seedMessage({
+    threadId: groupId,
+    senderId: teamLeadId,
+    body: "Team, let's align on Q3 priorities. I've attached the overview.",
+    minutesAgo: 1440,
+    attachments: [
+      {
+        path: attachPath,
+        name: "q3-strategy.png",
+        size: png.byteLength,
+        contentType: "image/png",
+      },
+    ],
+  });
+  await seedMessage({
+    threadId: groupId,
+    senderId: adminTcId,
+    body: "Looks great — I'll handle the TC workflow updates.",
+    minutesAgo: 1435,
+  });
+  await seedMessage({
+    threadId: groupId,
+    senderId: agentId,
+    body: "I can take the lead-gen experiments.",
+    minutesAgo: 1430,
+  });
+  await seedMessage({
+    threadId: groupId,
+    senderId: stalledAgentIds[0]!,
+    body: "Sounds good 👍",
+    minutesAgo: 1425,
+  });
+  await seedMessage({
+    threadId: groupId,
+    senderId: agentId,
+    body: "Pushing the first experiment live today 🚀",
+    minutesAgo: 15,
+  });
+  await react(g1, adminTcId, "❤️");
+  await react(g1, agentId, "❤️");
+
+  // ── DM: Phil (team_lead) ↔ Krisha (marketing) about a flyer ──
+  const flyerDmId = await seedThread({
+    type: "direct",
+    name: null,
+    createdBy: marketingId,
+    participants: [
+      { userId: teamLeadId, lastReadAt: msgAgo(0) },
+      { userId: marketingId, lastReadAt: msgAgo(0) },
+    ],
+  });
+  const f1 = await seedMessage({
+    threadId: flyerDmId,
+    senderId: marketingId,
+    body: "Hi Phil! The open-house flyer for 123 Main St is ready. Want me to post it?",
+    minutesAgo: 45,
+  });
+  await seedMessage({
+    threadId: flyerDmId,
+    senderId: teamLeadId,
+    body: "Yes please — looks awesome. ✅",
+    minutesAgo: 40,
+  });
+  await react(f1, teamLeadId, "✅");
+
+  console.log("• Messages: 3 threads (DM, group, marketing DM) w/ reactions");
 
   // 12) platform feature flags (Phase 5 editor). Seeded disabled; consuming code
   // lands in later phases. Upsert by key so re-seeding is idempotent and never

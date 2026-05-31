@@ -21,6 +21,7 @@ export type NotificationItem = {
   kind: string;
   requestId: string | null;
   requestTitle: string | null;
+  threadId: string | null;
   byName: string | null;
   claimed: boolean;
   read: boolean;
@@ -40,9 +41,24 @@ function describe(n: NotificationItem): string {
       return n.claimed
         ? `${n.byName ?? "Someone"} claimed “${title}”`
         : `You were assigned “${title}”`;
+    case "message_received":
+      return `${n.byName || "Someone"} sent you a message`;
+    case "message_mention":
+      return `${n.byName || "Someone"} mentioned you in a message`;
+    case "coaching_nudge":
+      return `${n.byName || "Your coach"} sent you a nudge`;
+    case "training_nudge":
+      return `${n.byName || "Your coach"} nudged you about training`;
     default:
       return title;
   }
+}
+
+/** Where a notification navigates when clicked. */
+function hrefFor(n: NotificationItem): string | null {
+  if (n.threadId) return `/app/messages/${n.threadId}`;
+  if (n.requestId) return `/app/requests/${n.requestId}`;
+  return null;
 }
 
 /** Header notification bell with unread badge + dropdown (audit PA-2). */
@@ -93,11 +109,12 @@ export function NotificationBell({
                   </span>
                 </>
               );
+              const href = hrefFor(n);
               return (
                 <li key={n.id}>
-                  {n.requestId ? (
+                  {href ? (
                     <Link
-                      href={`/app/requests/${n.requestId}`}
+                      href={href}
                       className="hover:bg-accent block px-2 py-2"
                     >
                       {inner}

@@ -30,7 +30,12 @@ export type AuditAction =
   | "goal_set"
   | "goal_deleted"
   | "activity_back_dated"
-  | "leaderboard_visibility_changed";
+  | "leaderboard_visibility_changed"
+  | "message_deleted"
+  | "message_thread_renamed"
+  | "message_participant_added"
+  | "message_participant_removed"
+  | "message_thread_left";
 
 export type AuditResourceType =
   | "company"
@@ -41,7 +46,9 @@ export type AuditResourceType =
   | "request"
   | "goal"
   | "activity_log"
-  | "coaching_note";
+  | "coaching_note"
+  | "message"
+  | "message_thread";
 
 export type LogAuditInput = {
   actor_user_id: string;
