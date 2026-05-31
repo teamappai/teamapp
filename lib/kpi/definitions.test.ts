@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   KPI_DEFINITIONS,
+  COACHING_KPI_DEFINITIONS,
   computeKpis,
+  type CoachingKpiInput,
   type KpiDeal,
   type KpiStage,
 } from "./definitions";
@@ -39,7 +41,7 @@ const STAGES: Record<string, KpiStage> = {
     probability_pct: 100,
   },
   lost: {
-    name: "Lost/Trash",
+    name: "Trash",
     is_terminal_won: false,
     is_terminal_lost: true,
     probability_pct: 0,
@@ -50,6 +52,7 @@ function deal(partial: Partial<KpiDeal>): KpiDeal {
   return {
     gci_cents: null,
     sales_price_cents: null,
+    commission_pct: null,
     close_date: null,
     stage: null,
     ...partial,
@@ -83,7 +86,7 @@ describe("KPI registry shape", () => {
         },
         {
           "format": "currency",
-          "helperText": "Estimated value of deals in progress (price × probability)",
+          "helperText": "Projected GCI from deals in progress (price × commission × probability)",
           "key": "pipeline_value",
           "label": "Pipeline Value",
         },
@@ -148,15 +151,45 @@ describe("ytd_closed_deals — count, matches the 'closed' title (F-027)", () =>
   });
 });
 
-describe("pipeline_value — price × probability over non-terminal stages", () => {
-  it("weights by stage probability and excludes terminal stages", () => {
+describe("pipeline_value — price × commission × probability (projected GCI)", () => {
+  it("weights by commission and stage probability, excluding terminal stages", () => {
     const deals = [
-      deal({ stage: STAGES.active, sales_price_cents: 100_000_00 }), // 40% -> 40_000_00
-      deal({ stage: STAGES.underContract, sales_price_cents: 200_000_00 }), // 80% -> 160_000_00
-      deal({ stage: STAGES.closed, sales_price_cents: 999_000_00 }), // terminal -> 0
-      deal({ stage: STAGES.lost, sales_price_cents: 999_000_00 }), // terminal -> 0
+      // $100k × 3% commission × 40% prob = 100_000_00 × 0.03 × 0.40 = 120_000
+      deal({
+        stage: STAGES.active,
+        sales_price_cents: 100_000_00,
+        commission_pct: 3.0,
+      }),
+      // $200k × 3% × 80% = 200_000_00 × 0.03 × 0.80 = 480_000
+      deal({
+        stage: STAGES.underContract,
+        sales_price_cents: 200_000_00,
+        commission_pct: 3.0,
+      }),
+      // terminal stages contribute 0 regardless of commission
+      deal({
+        stage: STAGES.closed,
+        sales_price_cents: 999_000_00,
+        commission_pct: 3.0,
+      }),
+      deal({
+        stage: STAGES.lost,
+        sales_price_cents: 999_000_00,
+        commission_pct: 3.0,
+      }),
     ];
-    expect(compute("pipeline_value", deals)).toBe(40_000_00 + 160_000_00);
+    expect(compute("pipeline_value", deals)).toBe(120_000 + 480_000);
+  });
+
+  it("contributes 0 when commission_pct is missing (no projected GCI)", () => {
+    const deals = [
+      deal({
+        stage: STAGES.active,
+        sales_price_cents: 100_000_00,
+        commission_pct: null,
+      }),
+    ];
+    expect(compute("pipeline_value", deals)).toBe(0);
   });
 });
 
@@ -169,6 +202,44 @@ describe("active_listings — count of Active/Listed non-terminal stages", () =>
       deal({ stage: STAGES.closed }), // terminal
     ];
     expect(compute("active_listings", deals)).toBe(2);
+  });
+});
+
+describe("coaching KPI registry (Phase 10)", () => {
+  it("every coaching KPI has a label, helper text, and compute function", () => {
+    expect(COACHING_KPI_DEFINITIONS.length).toBeGreaterThan(0);
+    for (const kpi of COACHING_KPI_DEFINITIONS) {
+      expect(kpi.key).toBeTruthy();
+      expect(kpi.label).toBeTruthy();
+      expect(kpi.helperText.length).toBeGreaterThan(0);
+      expect(typeof kpi.compute).toBe("function");
+    }
+  });
+
+  it("each compute reads the matching field from the input", () => {
+    const input: CoachingKpiInput = {
+      topOfFunnel: 120,
+      appointments: 18,
+      pipeline: 9,
+      showings: 5,
+      offers: 3,
+      underContract: 2,
+      closed: 1,
+    };
+    const byKey = (key: string) =>
+      COACHING_KPI_DEFINITIONS.find((k) => k.key === key)!.compute(input);
+    expect(byKey("top_of_funnel")).toBe(120);
+    expect(byKey("appointments")).toBe(18);
+    expect(byKey("pipeline")).toBe(9);
+    expect(byKey("showings")).toBe(5);
+    expect(byKey("offers_submitted")).toBe(3);
+    expect(byKey("under_contract")).toBe(2);
+    expect(byKey("closed")).toBe(1);
+  });
+
+  it("keys are unique", () => {
+    const keys = COACHING_KPI_DEFINITIONS.map((k) => k.key);
+    expect(new Set(keys).size).toBe(keys.length);
   });
 });
 

@@ -178,6 +178,8 @@ async function main(): Promise<void> {
         seats_total: plan.included_seats,
         status: "active",
         signed_up_source: "seed",
+        // HomeReady shows the full leaderboard to agents (Phase 10).
+        leaderboard_visible_to_agents: true,
         brokerage_name: "Real Brokerage",
         brokerage_license_number: null,
         brokerage_state: "CA",
@@ -443,8 +445,10 @@ async function main(): Promise<void> {
     },
     {
       company_id: companyId,
+      // Cancelled = a signed buyer agreement that fell through (financing).
+      // Demonstrates the new terminal-lost stage in the coaching pipeline summary.
       deal_type_id: dealTypes![0].id,
-      stage_id: stageId("Pending"),
+      stage_id: stageId("Cancelled"),
       representing: "buyer",
       property_address: "55 Oak Ave",
       property_city: "Glendale",
@@ -515,6 +519,22 @@ async function main(): Promise<void> {
       buyer_agent_id: agentId,
       created_by: agentId,
     },
+    {
+      company_id: companyId,
+      // Expired = a listing whose agreement period lapsed without transacting.
+      deal_type_id: dealTypes![1].id,
+      stage_id: stageId("Expired"),
+      representing: "seller",
+      property_address: "412 Walnut Dr",
+      property_city: "Arcadia",
+      property_state: "CA",
+      property_zip: "91006",
+      client_first_name: "Grace",
+      client_last_name: "Tan",
+      sales_price_cents: 95000000,
+      listing_agent_id: agentId,
+      created_by: agentId,
+    },
   ];
   // defaultToNull:false so rows that omit a column (e.g. public_share_link_enabled)
   // fall back to the column DEFAULT rather than NULL on this bulk insert.
@@ -522,7 +542,7 @@ async function main(): Promise<void> {
     .from("deals")
     .insert(dealRows, { defaultToNull: false });
   die("insert deals", dealErr);
-  console.log("• Deals: 5 across stages");
+  console.log("• Deals: 6 across stages (incl. Cancelled + Expired)");
 
   // request types (smart-assignment defaults + workflow category — Phase 9)
   const requestTypeSpecs: Array<{
@@ -633,66 +653,164 @@ async function main(): Promise<void> {
     "• Requests: 5 (pending / unclaimed / in_progress / ready_for_review / completed)",
   );
 
-  // 10) seven days of activity logs for the agent
+  // 10) activity logs. Agent Phil gets 14 dense days (one of them a logged
+  // off-day, to exercise the gray heatmap cell + streak-preserving semantics);
+  // the three quieter agents get a week of lighter activity so the leaderboard
+  // and heatmap have multiple rows.
   const activityRows: Tables["activity_logs"]["Insert"][] = [];
-  for (let i = 0; i < 7; i++) {
+  // Agent Phil: 14 days back from today. Day index 3 is an off-day.
+  for (let i = 0; i < 14; i++) {
+    const offDay = i === 3;
     activityRows.push({
       user_id: agentId,
       company_id: companyId,
       log_date: daysAgoDate(i),
-      door_knocks: 10 + i,
-      open_houses: i % 3 === 0 ? 1 : 0,
-      conversations: 5 + (i % 4),
-      db_seller_leads: i % 2,
-      db_buyer_leads: (i + 1) % 2,
-      buyer_consults: i % 3,
-      listing_appts: i % 2,
-      cma_deliveries: i % 2,
-      zillow_appts_set: i % 3,
-      zillow_appts_met: i % 4 === 0 ? 1 : 0,
-      showings: 2 + (i % 3),
-      offers_submitted: i % 2,
+      is_off_day: offDay,
+      door_knocks: offDay ? 0 : 10 + (i % 5),
+      open_houses: offDay ? 0 : i % 3 === 0 ? 1 : 0,
+      conversations: offDay ? 0 : 6 + (i % 4),
+      seller_leads_added: offDay ? 0 : i % 2,
+      buyer_leads_added: offDay ? 0 : (i + 1) % 2,
+      pqs: offDay ? 0 : i % 4 === 0 ? 1 : 0,
+      buyer_consults: offDay ? 0 : i % 3,
+      listing_appts: offDay ? 0 : i % 2,
+      cma_deliveries: offDay ? 0 : i % 2,
+      zillow_appts_set: offDay ? 0 : i % 3,
+      zillow_appts_met: offDay ? 0 : i % 4 === 0 ? 1 : 0,
+      showings: offDay ? 0 : 2 + (i % 3),
+      listings_signed: offDay ? 0 : i % 7 === 0 ? 1 : 0,
+      buyer_agreements_signed: offDay ? 0 : i % 5 === 0 ? 1 : 0,
+      offers_submitted: offDay ? 0 : i % 2,
     });
   }
+  // The three quieter agents: 7 lighter days each. Every metric column is set
+  // explicitly so all rows share one shape — PostgREST unions keys across a bulk
+  // insert and sends an explicit `null` for any key a row omits, and a column
+  // DEFAULT does NOT apply to an explicit null (only to an omitted key). Mixing
+  // a 16-field row with a 6-field row would therefore null-out the missing
+  // metrics and trip the NOT NULL/CHECK constraints.
+  stalledAgentIds.forEach((uid, idx) => {
+    for (let i = 0; i < 7; i++) {
+      activityRows.push({
+        user_id: uid,
+        company_id: companyId,
+        log_date: daysAgoDate(i),
+        is_off_day: false,
+        door_knocks: 3 + ((i + idx) % 4),
+        open_houses: i % 5 === 0 ? 1 : 0,
+        conversations: 2 + (i % 3),
+        seller_leads_added: i % 3 === 0 ? 1 : 0,
+        buyer_leads_added: i % 4 === 0 ? 1 : 0,
+        pqs: i % 6 === 0 ? 1 : 0,
+        buyer_consults: i % 4 === 0 ? 1 : 0,
+        listing_appts: i % 5 === 0 ? 1 : 0,
+        cma_deliveries: i % 6 === 0 ? 1 : 0,
+        zillow_appts_set: i % 4 === 0 ? 1 : 0,
+        zillow_appts_met: i % 7 === 0 ? 1 : 0,
+        showings: i % 2,
+        listings_signed: 0,
+        buyer_agreements_signed: i % 7 === 0 ? 1 : 0,
+        offers_submitted: i % 3 === 0 ? 1 : 0,
+      });
+    }
+  });
+  // defaultToNull:false makes column DEFAULTs apply to any still-omitted key as
+  // a second layer of safety against the heterogeneous-shape pitfall above.
   const { error: actErr } = await admin
     .from("activity_logs")
-    .insert(activityRows);
+    .insert(activityRows, { defaultToNull: false });
   die("insert activity_logs", actErr);
-  console.log("• Activity logs: 7 days for Agent Phil");
+  console.log(
+    `• Activity logs: 14 days for Agent Phil (incl. 1 off-day) + 7 days × 3 quieter agents`,
+  );
 
-  // bonus: goals (PA-6) — one individual + one team-wide
-  const periodStart = `${new Date().getUTCFullYear()}-01-01`;
+  // bonus: goals (PA-6, hybrid ownership). Agent-set outcome goals + a
+  // team_lead-set input goal + one team-wide goal for the "Goals vs Actuals"
+  // card. period_start anchors to the current month / quarter / year.
+  const today = new Date();
+  const yyyy = today.getUTCFullYear();
+  const pad2 = (n: number) => String(n).padStart(2, "0");
+  const monthStart = `${yyyy}-${pad2(today.getUTCMonth() + 1)}-01`;
+  const quarterStart = `${yyyy}-${pad2(Math.floor(today.getUTCMonth() / 3) * 3 + 1)}-01`;
+  const annualStart = `${yyyy}-01-01`;
   const { error: goalErr } = await admin.from("goals").insert([
     {
       company_id: companyId,
       user_id: agentId,
-      period: "annual",
-      period_start: periodStart,
-      goal_type: "closed_deals_count",
-      target_value: 24,
+      set_by_user_id: agentId, // agent-set outcome goal
+      period: "quarterly",
+      period_start: quarterStart,
+      goal_type: "gci_cents",
+      target_value: 20000000, // $200,000
     },
     {
       company_id: companyId,
-      user_id: null,
+      user_id: agentId,
+      set_by_user_id: agentId, // agent-set outcome goal
+      period: "quarterly",
+      period_start: quarterStart,
+      goal_type: "closed_deals_count",
+      target_value: 8,
+    },
+    {
+      company_id: companyId,
+      user_id: agentId,
+      set_by_user_id: teamLeadId, // team_lead-set input goal
+      period: "monthly",
+      period_start: monthStart,
+      goal_type: "conversations_count",
+      target_value: 200,
+    },
+    {
+      company_id: companyId,
+      user_id: null, // team-wide aggregate goal
+      set_by_user_id: teamLeadId,
       period: "annual",
-      period_start: periodStart,
+      period_start: annualStart,
       goal_type: "gci_cents",
-      target_value: 50000000,
+      target_value: 50000000, // $500,000
     },
   ]);
   die("insert goals", goalErr);
-  console.log("• Goals: 1 individual + 1 team-wide");
+  console.log("• Goals: 3 agent goals (2 outcome + 1 input) + 1 team-wide");
 
-  // 11) one coaching log entry tied to the agent
-  const { error: coachErr } = await admin.from("coaching_log_entries").insert({
-    agent_user_id: agentId,
-    coach_user_id: teamLeadId,
-    body: "Great momentum on prospecting. Focus next week on converting buyer consults to signed agreements.",
-    occurred_at: new Date().toISOString(),
-    is_test: false,
-  });
+  // 11) coaching log entries across several days so the dashboard's day-group
+  // headers ("Today" / "Yesterday" / explicit date) are demonstrable. One entry
+  // is flagged is_test=true to exercise the default test-data filter (F-109/111).
+  const hoursAgo = (h: number) =>
+    new Date(Date.now() - h * 60 * 60 * 1000).toISOString();
+  const { error: coachErr } = await admin.from("coaching_log_entries").insert([
+    {
+      agent_user_id: agentId,
+      coach_user_id: teamLeadId,
+      body: "Great momentum on prospecting. Focus next week on converting buyer consults to signed agreements.",
+      occurred_at: hoursAgo(2),
+      is_test: false,
+    },
+    {
+      agent_user_id: agentId,
+      coach_user_id: teamLeadId,
+      body: "Reviewed pipeline — the Oak Ave deal cancelled on financing. Let's tighten lender pre-checks before writing offers.",
+      occurred_at: hoursAgo(26), // yesterday
+      is_test: false,
+    },
+    {
+      agent_user_id: agentId,
+      coach_user_id: teamLeadId,
+      body: "Role-played a listing presentation. Strong on pricing story; work the objection handling.",
+      occurred_at: hoursAgo(24 * 5), // ~5 days ago
+      is_test: false,
+    },
+    {
+      agent_user_id: agentId,
+      coach_user_id: teamLeadId,
+      body: "[seeded demo] This is sample/test coaching data.",
+      occurred_at: hoursAgo(3),
+      is_test: true,
+    },
+  ]);
   die("insert coaching_log_entry", coachErr);
-  console.log("• Coaching log: 1 entry");
+  console.log("• Coaching log: 4 entries (1 flagged test)");
 
   // 12) platform feature flags (Phase 5 editor). Seeded disabled; consuming code
   // lands in later phases. Upsert by key so re-seeding is idempotent and never

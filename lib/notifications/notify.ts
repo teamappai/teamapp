@@ -17,7 +17,8 @@ export type NotificationKind =
   | "request_ready_for_review"
   | "request_completed"
   | "request_new_comment"
-  | "request_assigned";
+  | "request_assigned"
+  | "coaching_nudge";
 
 export type NotifyInput = {
   /** Recipient. */

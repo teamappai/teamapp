@@ -42,6 +42,7 @@ export default async function DealsPage() {
     deals.map((d) => ({
       gci_cents: d.gci_cents,
       sales_price_cents: d.sales_price_cents,
+      commission_pct: d.commission_pct,
       close_date: d.close_date,
       stage: d.stage,
     })),

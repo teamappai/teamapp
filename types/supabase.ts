@@ -16,20 +16,24 @@ export type Database = {
     Tables: {
       activity_logs: {
         Row: {
+          buyer_agreements_signed: number
           buyer_consults: number
+          buyer_leads_added: number
           cma_deliveries: number
           company_id: string
           conversations: number
           created_at: string
-          db_buyer_leads: number
-          db_seller_leads: number
           door_knocks: number
           id: string
+          is_off_day: boolean
           listing_appts: number
+          listings_signed: number
           log_date: string
           marked_all_zeros: boolean
           offers_submitted: number
           open_houses: number
+          pqs: number
+          seller_leads_added: number
           showings: number
           updated_at: string
           user_id: string
@@ -37,20 +41,24 @@ export type Database = {
           zillow_appts_set: number
         }
         Insert: {
+          buyer_agreements_signed?: number
           buyer_consults?: number
+          buyer_leads_added?: number
           cma_deliveries?: number
           company_id: string
           conversations?: number
           created_at?: string
-          db_buyer_leads?: number
-          db_seller_leads?: number
           door_knocks?: number
           id?: string
+          is_off_day?: boolean
           listing_appts?: number
+          listings_signed?: number
           log_date: string
           marked_all_zeros?: boolean
           offers_submitted?: number
           open_houses?: number
+          pqs?: number
+          seller_leads_added?: number
           showings?: number
           updated_at?: string
           user_id: string
@@ -58,20 +66,24 @@ export type Database = {
           zillow_appts_set?: number
         }
         Update: {
+          buyer_agreements_signed?: number
           buyer_consults?: number
+          buyer_leads_added?: number
           cma_deliveries?: number
           company_id?: string
           conversations?: number
           created_at?: string
-          db_buyer_leads?: number
-          db_seller_leads?: number
           door_knocks?: number
           id?: string
+          is_off_day?: boolean
           listing_appts?: number
+          listings_signed?: number
           log_date?: string
           marked_all_zeros?: boolean
           offers_submitted?: number
           open_houses?: number
+          pqs?: number
+          seller_leads_added?: number
           showings?: number
           updated_at?: string
           user_id?: string
@@ -230,6 +242,7 @@ export type Database = {
           created_at: string
           deleted_at: string | null
           id: string
+          leaderboard_visible_to_agents: boolean
           logo_url: string | null
           name: string
           plan: Database["public"]["Enums"]["company_plan"]
@@ -249,6 +262,7 @@ export type Database = {
           created_at?: string
           deleted_at?: string | null
           id?: string
+          leaderboard_visible_to_agents?: boolean
           logo_url?: string | null
           name: string
           plan?: Database["public"]["Enums"]["company_plan"]
@@ -268,6 +282,7 @@ export type Database = {
           created_at?: string
           deleted_at?: string | null
           id?: string
+          leaderboard_visible_to_agents?: boolean
           logo_url?: string | null
           name?: string
           plan?: Database["public"]["Enums"]["company_plan"]
@@ -842,6 +857,7 @@ export type Database = {
           id: string
           period: Database["public"]["Enums"]["goal_period"]
           period_start: string
+          set_by_user_id: string | null
           target_value: number
           updated_at: string
           user_id: string | null
@@ -853,6 +869,7 @@ export type Database = {
           id?: string
           period: Database["public"]["Enums"]["goal_period"]
           period_start: string
+          set_by_user_id?: string | null
           target_value: number
           updated_at?: string
           user_id?: string | null
@@ -864,6 +881,7 @@ export type Database = {
           id?: string
           period?: Database["public"]["Enums"]["goal_period"]
           period_start?: string
+          set_by_user_id?: string | null
           target_value?: number
           updated_at?: string
           user_id?: string | null
@@ -881,6 +899,20 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "goals_set_by_user_id_fkey"
+            columns: ["set_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "active_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "goals_set_by_user_id_fkey"
+            columns: ["set_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
           {
@@ -2519,6 +2551,50 @@ export type Database = {
           },
         ]
       }
+      v_company_funnel: {
+        Row: {
+          appointments: number | null
+          company_id: string | null
+          is_off_day: boolean | null
+          log_date: string | null
+          offers_submitted: number | null
+          pipeline: number | null
+          role: Database["public"]["Enums"]["user_role"] | null
+          showings: number | null
+          top_of_funnel: number | null
+          user_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activity_logs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "active_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activity_logs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activity_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "active_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activity_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       auth_user_company_id: { Args: never; Returns: string }
@@ -2559,6 +2635,12 @@ export type Database = {
         | "closed_deals_count"
         | "appointments_count"
         | "conversations_count"
+        | "listings_signed_count"
+        | "buyer_agreements_signed_count"
+        | "pqs_count"
+        | "showings_count"
+        | "offers_submitted_count"
+        | "top_of_funnel_count"
       message_thread_type: "direct" | "group" | "channel"
       progress_status: "not_started" | "in_progress" | "completed"
       publish_status: "draft" | "published" | "archived"
@@ -2721,6 +2803,12 @@ export const Constants = {
         "closed_deals_count",
         "appointments_count",
         "conversations_count",
+        "listings_signed_count",
+        "buyer_agreements_signed_count",
+        "pqs_count",
+        "showings_count",
+        "offers_submitted_count",
+        "top_of_funnel_count",
       ],
       message_thread_type: ["direct", "group", "channel"],
       progress_status: ["not_started", "in_progress", "completed"],

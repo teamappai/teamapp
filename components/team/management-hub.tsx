@@ -15,6 +15,7 @@ import {
   DealStagesTab,
   RequestTypesTab,
 } from "@/components/team/config-tabs";
+import { CompanySettingsTab } from "@/components/team/company-settings-tab";
 
 export function ManagementHub({
   companyId,
@@ -24,6 +25,7 @@ export function ManagementHub({
   dealTypes,
   dealStages,
   requestTypes,
+  leaderboardVisibleToAgents,
 }: {
   companyId: string;
   activeTab: HubTab;
@@ -32,6 +34,7 @@ export function ManagementHub({
   dealTypes: DealType[];
   dealStages: DealStage[];
   requestTypes: RequestType[];
+  leaderboardVisibleToAgents: boolean;
 }) {
   const router = useRouter();
 
@@ -69,6 +72,11 @@ export function ManagementHub({
       </TabsContent>
       <TabsContent value="request-types">
         <RequestTypesTab requestTypes={requestTypes} />
+      </TabsContent>
+      <TabsContent value="company-settings">
+        <CompanySettingsTab
+          leaderboardVisibleToAgents={leaderboardVisibleToAgents}
+        />
       </TabsContent>
     </Tabs>
   );

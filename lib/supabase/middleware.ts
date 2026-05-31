@@ -124,6 +124,23 @@ export async function updateSession(request: NextRequest) {
     }
   }
 
+  // Coaching surfaces (Phase 10 / PA-5/PA-6). Everyone on a team except
+  // marketing, which has no funnel (F-031-style scoping). Pages re-check via
+  // canViewCoaching; the agent variant is self-scoped in the page.
+  if (pathname.startsWith("/app/coaching") && role === "marketing") {
+    return forbid("/not-authorized");
+  }
+
+  // Activity Log is for producers only (agent / team_lead). admin_tc and
+  // marketing have no daily prospecting funnel.
+  if (
+    pathname.startsWith("/app/activity-log") &&
+    role !== "agent" &&
+    role !== "team_lead"
+  ) {
+    return forbid("/not-authorized");
+  }
+
   // Requests surfaces (Phase 9 / PA-4). Everyone may view; marketing is
   // fulfill-only and cannot create (F-136). Per-request marketing visibility
   // narrowing (F-133) is enforced in the page/queries (IDOR guard).

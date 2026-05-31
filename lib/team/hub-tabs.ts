@@ -6,6 +6,7 @@ export const HUB_TABS = [
   { value: "deal-types", label: "Deal Types" },
   { value: "deal-stages", label: "Deal Stages" },
   { value: "request-types", label: "Request Types" },
+  { value: "company-settings", label: "Company Settings" },
 ] as const;
 
 export type HubTab = (typeof HUB_TABS)[number]["value"];

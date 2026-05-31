@@ -29,9 +29,11 @@ import {
   updateRequestType,
   deleteRequestType,
   reorderConfig,
+  setLeaderboardVisible,
   type DealStageInput,
   type RequestTypeInput,
 } from "@/lib/team/config";
+import { logAudit } from "@/lib/audit/log";
 import {
   sectionSchema,
   moduleSchema,
@@ -309,6 +311,26 @@ export async function reorderConfigAction(
   const res = await reorderConfig(table, orderedIds);
   if (res.ok) revalidatePath(HUB);
   return res;
+}
+
+// ── company settings ──────────────────────────────────────────────────────────
+export async function setLeaderboardVisibilityAction(
+  enabled: boolean,
+): Promise<ActionResult> {
+  const { user, companyId } = await requireTeamLead();
+  if (!companyId) return { ok: false, error: "No company context." };
+  const res = await setLeaderboardVisible(companyId, enabled);
+  if (!res.ok) return res;
+  await logAudit({
+    actor_user_id: user.id,
+    action: "leaderboard_visibility_changed",
+    resource_type: "company",
+    resource_id: companyId,
+    metadata: { enabled },
+  });
+  revalidatePath(HUB);
+  revalidatePath("/app/coaching");
+  return { ok: true };
 }
 
 // ── image / file uploads for the module editor ────────────────────────────────

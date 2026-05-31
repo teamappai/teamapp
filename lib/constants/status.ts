@@ -25,9 +25,13 @@ const DEAL: Record<string, StatusVariant> = {
   submitted: "info",
   under_review: "info",
   active: "success",
-  pending: "neutral",
   under_contract: "info",
   closed: "success",
+  // Terminal-lost family (Phase 10): Trash maps to "lost" via stageStatusKey;
+  // Cancelled/Expired keep their own keys. "Pending" was merged into Under
+  // Contract and is gone.
+  cancelled: "danger",
+  expired: "danger",
   lost: "danger",
 };
 

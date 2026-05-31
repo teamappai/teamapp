@@ -45,6 +45,22 @@ describe("formatCurrency", () => {
     expect(formatCurrency(0, { compact: true })).toBe("$0"));
   it("compact negative millions", () =>
     expect(formatCurrency(-123456700, { compact: true })).toBe("-$1.2M"));
+
+  // precise compact (coaching): keep one decimal even when it's zero
+  it("precise compact keeps a trailing .0 on millions", () =>
+    expect(formatCurrency(100000000, { compact: true, precise: true })).toBe(
+      "$1.0M",
+    ));
+  it("precise compact keeps a trailing .0 on thousands", () =>
+    expect(formatCurrency(25000000, { compact: true, precise: true })).toBe(
+      "$250.0K",
+    ));
+  it("precise compact still shows real decimals", () =>
+    expect(formatCurrency(123456700, { compact: true, precise: true })).toBe(
+      "$1.2M",
+    ));
+  it("precise has no effect without compact", () =>
+    expect(formatCurrency(123456700, { precise: true })).toBe("$1,234,567"));
 });
 
 describe("formatPercent", () => {

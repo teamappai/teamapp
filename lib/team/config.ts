@@ -231,6 +231,32 @@ export async function deleteRequestType(id: string): Promise<Result> {
   return error ? { ok: false, error: error.message } : { ok: true };
 }
 
+// ── company settings ──────────────────────────────────────────────────────────
+export async function getCompanySettings(
+  companyId: string,
+): Promise<{ leaderboardVisibleToAgents: boolean }> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("companies")
+    .select("leaderboard_visible_to_agents")
+    .eq("id", companyId)
+    .single();
+  return { leaderboardVisibleToAgents: !!data?.leaderboard_visible_to_agents };
+}
+
+/** Toggle whether agents can see the full team leaderboard (Phase 10). */
+export async function setLeaderboardVisible(
+  companyId: string,
+  enabled: boolean,
+): Promise<Result> {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("companies")
+    .update({ leaderboard_visible_to_agents: enabled })
+    .eq("id", companyId);
+  return error ? { ok: false, error: error.message } : { ok: true };
+}
+
 // ── generic reorder for any config table ──────────────────────────────────────
 export async function reorderConfig(
   table: "deal_types" | "deal_stages" | "request_types",
