@@ -84,7 +84,7 @@ const NAV_BY_ROLE: Record<UserRole, NavItem[]> = {
     { href: "/app/requests", label: "Requests", icon: "requests" },
     { href: "/app/training", label: "Training", icon: "training" },
     { href: "/app/messages", label: "Messages", icon: "messages" },
-    { href: "/app/activity", label: "Activity Log", icon: "activityLog" },
+    { href: "/app/activity-log", label: "Activity Log", icon: "activityLog" },
   ],
   admin_tc: [
     {
@@ -93,6 +93,7 @@ const NAV_BY_ROLE: Record<UserRole, NavItem[]> = {
       icon: "dashboard",
       exact: true,
     },
+    { href: "/app/coaching", label: "Coaching", icon: "coaching" },
     { href: "/app/requests", label: "Requests", icon: "requests" },
     { href: "/app/deals", label: "Deals", icon: "deals" },
     { href: "/app/training", label: "Training", icon: "training" },

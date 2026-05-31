@@ -23,7 +23,14 @@ export type AuditAction =
   | "training_nudge_sent"
   | "deal_deleted"
   | "request_status_changed"
-  | "request_deleted";
+  | "request_deleted"
+  | "coaching_nudge_sent"
+  | "coaching_note_added"
+  | "coaching_note_deleted"
+  | "goal_set"
+  | "goal_deleted"
+  | "activity_back_dated"
+  | "leaderboard_visibility_changed";
 
 export type AuditResourceType =
   | "company"
@@ -31,7 +38,10 @@ export type AuditResourceType =
   | "feature_flag"
   | "note"
   | "deal"
-  | "request";
+  | "request"
+  | "goal"
+  | "activity_log"
+  | "coaching_note";
 
 export type LogAuditInput = {
   actor_user_id: string;

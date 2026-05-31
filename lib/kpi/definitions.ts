@@ -23,6 +23,8 @@ export type KpiStage = {
 export type KpiDeal = {
   gci_cents: number | null;
   sales_price_cents: number | null;
+  /** Commission rate as a percent (e.g. 3.0 = 3%); drives projected GCI. */
+  commission_pct: number | null;
   /** ISO date (YYYY-MM-DD) the deal closed, or null if not closed. */
   close_date: string | null;
   stage: KpiStage | null;
@@ -90,9 +92,12 @@ export const KPI_DEFINITIONS: readonly KpiDefinition[] = [
   {
     key: "pipeline_value",
     label: "Pipeline Value",
-    helperText: "Estimated value of deals in progress (price × probability)",
+    helperText:
+      "Projected GCI from deals in progress (price × commission × probability)",
     format: "currency",
-    // Sum of sales_price_cents × probability for deals in non-terminal stages.
+    // Projected COMMISSION (not gross transaction value): for each non-terminal
+    // deal, sales_price_cents × commission_pct/100 × probability_pct/100.
+    // Deleted/draft deals are already excluded upstream (active_deals scope).
     compute: (deals) =>
       Math.round(
         deals
@@ -101,6 +106,7 @@ export const KPI_DEFINITIONS: readonly KpiDefinition[] = [
             (sum, d) =>
               sum +
               (d.sales_price_cents ?? 0) *
+                ((d.commission_pct ?? 0) / 100) *
                 ((d.stage?.probability_pct ?? 0) / 100),
             0,
           ),
@@ -114,6 +120,84 @@ export const KPI_DEFINITIONS: readonly KpiDefinition[] = [
     // Count of deals in a non-terminal "Active"/"Listed" stage.
     compute: (deals) =>
       deals.filter((d) => isActiveListingStage(d.stage)).length,
+  },
+] as const;
+
+/**
+ * Coaching KPI registry (Phase 10). Same co-location discipline as the deal
+ * KPIs above: each card's helper text sits beside the computation that produces
+ * it, and definitions.test.ts asserts every coaching KPI has a label, helper,
+ * and compute function. These read the funnel totals + derived pipeline counts.
+ */
+export type CoachingKpiInput = {
+  /** Sum of the six top-of-funnel volume metrics over the period. */
+  topOfFunnel: number;
+  /** Sum of the five appointment-type metrics over the period. */
+  appointments: number;
+  /** Sum of the four pipeline metrics over the period. */
+  pipeline: number;
+  /** Showings attended over the period. */
+  showings: number;
+  /** Offers submitted over the period. */
+  offers: number;
+  /** Deals currently in the Under Contract stage (snapshot). */
+  underContract: number;
+  /** Deals that closed (terminal-won) within the period. */
+  closed: number;
+};
+
+export type CoachingKpiDefinition = {
+  key: string;
+  label: string;
+  helperText: string;
+  compute: (input: CoachingKpiInput) => number;
+};
+
+export const COACHING_KPI_DEFINITIONS: readonly CoachingKpiDefinition[] = [
+  {
+    key: "top_of_funnel",
+    label: "Top of Funnel",
+    helperText:
+      "Total volume activity (door knocks, open houses, conversations, leads added, PQs) in the period.",
+    compute: (i) => i.topOfFunnel,
+  },
+  {
+    key: "appointments",
+    label: "Appointments",
+    helperText:
+      "All booked appointments (buyer consults, listing appts, CMAs, Zillow set/met) in the period.",
+    compute: (i) => i.appointments,
+  },
+  {
+    key: "pipeline",
+    label: "Pipeline",
+    helperText:
+      "Committed daily activity (showings, signed listings, signed buyer agreements, offers) in the period.",
+    compute: (i) => i.pipeline,
+  },
+  {
+    key: "showings",
+    label: "Showings",
+    helperText: "Property showings attended with a buyer in the period.",
+    compute: (i) => i.showings,
+  },
+  {
+    key: "offers_submitted",
+    label: "Offers Submitted",
+    helperText: "Written offers submitted on behalf of buyers in the period.",
+    compute: (i) => i.offers,
+  },
+  {
+    key: "under_contract",
+    label: "Under Contract",
+    helperText: "Deals currently in the Under Contract stage (live snapshot).",
+    compute: (i) => i.underContract,
+  },
+  {
+    key: "closed",
+    label: "Closed",
+    helperText: "Deals that closed (terminal-won) within the period.",
+    compute: (i) => i.closed,
   },
 ] as const;
 

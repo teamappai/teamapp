@@ -7,6 +7,7 @@ import {
   listDealTypes,
   listDealStages,
   listRequestTypes,
+  getCompanySettings,
 } from "@/lib/team/config";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -42,13 +43,14 @@ export default async function ManagementPage({
     );
   }
 
-  const [sections, modules, dealTypes, dealStages, requestTypes] =
+  const [sections, modules, dealTypes, dealStages, requestTypes, settings] =
     await Promise.all([
       listSections(companyId),
       listModules(companyId),
       listDealTypes(companyId),
       listDealStages(companyId),
       listRequestTypes(companyId),
+      getCompanySettings(companyId),
     ]);
 
   return (
@@ -62,6 +64,7 @@ export default async function ManagementPage({
         dealTypes={dealTypes}
         dealStages={dealStages}
         requestTypes={requestTypes}
+        leaderboardVisibleToAgents={settings.leaderboardVisibleToAgents}
       />
     </div>
   );

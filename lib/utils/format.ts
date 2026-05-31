@@ -69,19 +69,24 @@ export function formatDate(
 /**
  * Format integer cents as USD. Symbol is always on the LEFT (audit F-101) and
  * $0 renders as "$0", never "$0.0" (audit F-021). `compact` collapses large
- * amounts to "$1.2M" / "$250K".
+ * amounts to "$1.2M" / "$250K" (a trailing ".0" is trimmed → "$1M").
+ *
+ * `precise` (only meaningful with `compact`) KEEPS one decimal even when it's
+ * zero → "$1.0M" / "$250.0K". Coaching contexts use this for the trailing-zero
+ * precision Phil prefers; the rest of the app stays on the trimmed default.
  */
 export function formatCurrency(
   cents: number,
-  options?: { compact?: boolean },
+  options?: { compact?: boolean; precise?: boolean },
 ): string {
   const dollars = (cents ?? 0) / 100;
 
   if (options?.compact) {
     const abs = Math.abs(dollars);
     const sign = dollars < 0 ? "-" : "";
-    if (abs >= 1_000_000) return `${sign}$${trimZero(abs / 1_000_000)}M`;
-    if (abs >= 1_000) return `${sign}$${trimZero(abs / 1_000)}K`;
+    const scale = options.precise ? (n: number) => n.toFixed(1) : trimZero;
+    if (abs >= 1_000_000) return `${sign}$${scale(abs / 1_000_000)}M`;
+    if (abs >= 1_000) return `${sign}$${scale(abs / 1_000)}K`;
     return `${sign}$${formatNumber(Math.round(abs))}`;
   }
 
