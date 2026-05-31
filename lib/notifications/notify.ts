@@ -18,7 +18,10 @@ export type NotificationKind =
   | "request_completed"
   | "request_new_comment"
   | "request_assigned"
-  | "coaching_nudge";
+  | "coaching_nudge"
+  | "training_nudge"
+  | "message_received"
+  | "message_mention";
 
 export type NotifyInput = {
   /** Recipient. */

@@ -177,6 +177,10 @@ app origin (`NEXT_PUBLIC_APP_URL`) plus `…/auth/confirm` and `…/reset-passwo
   because there is no `app/app/error.tsx`. The Requests detail page already
   bounces marketing IDOR attempts via `redirect()` as an interim; a shared error
   boundary should render `/not-authorized` for all thrown auth errors.
+- **Login page hydration warning** (target: Phase 16 launch readiness). A
+  pre-existing React hydration warning fires on the login page (shadcn `Label`
+  component), visible only in incognito. Unrelated to feature work; resolve
+  during the pre-launch polish pass.
 
 ### Phase 8a — AI extraction accuracy refinements (post-Phase 8)
 

@@ -1083,6 +1083,8 @@ export type Database = {
         Row: {
           attachments: Json
           body: string | null
+          context_payload: Json | null
+          context_type: string
           created_at: string
           deleted_at: string | null
           edited_at: string | null
@@ -1094,6 +1096,8 @@ export type Database = {
         Insert: {
           attachments?: Json
           body?: string | null
+          context_payload?: Json | null
+          context_type?: string
           created_at?: string
           deleted_at?: string | null
           edited_at?: string | null
@@ -1105,6 +1109,8 @@ export type Database = {
         Update: {
           attachments?: Json
           body?: string | null
+          context_payload?: Json | null
+          context_type?: string
           created_at?: string
           deleted_at?: string | null
           edited_at?: string | null

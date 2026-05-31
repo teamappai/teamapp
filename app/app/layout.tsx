@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getSessionProfile } from "@/lib/auth/profile";
 import { ctaForRole, navForRole } from "@/lib/constants/nav";
 import { getOnboardingProgress } from "@/lib/training/progress";
+import { getUnreadSummary } from "@/lib/messages/queries";
 import {
   IMPERSONATION_ADMIN_ID_COOKIE,
   verifyValue,
@@ -87,12 +88,20 @@ export default async function AppLayout({
       kind: n.kind,
       requestId: (p.request_id as string | undefined) ?? null,
       requestTitle: (p.request_title as string | undefined) ?? null,
+      threadId: (p.thread_id as string | undefined) ?? null,
       byName: (p.by_name as string | undefined) ?? null,
       claimed: p.claimed === true,
       read: n.read_at !== null,
       createdAt: n.created_at,
     };
   });
+
+  // Unread messages badge for the header chat icon. Shares ONE source of truth
+  // with the per-thread list badges (F-122) — both call getUnreadSummary.
+  const { total: unreadMessages } = await getUnreadSummary(
+    notifSupabase,
+    profile.id,
+  );
 
   // Show the persistent impersonation banner when a super_admin is acting as
   // this (impersonated) user. The signed cookie can't be forged by the target.
@@ -108,6 +117,7 @@ export default async function AppLayout({
       <AppShell
         sidebar={sidebar}
         identity={identity}
+        unreadCount={unreadMessages}
         notifications={notifications}
       >
         {children}

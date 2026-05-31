@@ -11,7 +11,16 @@ import {
 } from "@/lib/validations/coaching";
 import { notify } from "@/lib/notifications/notify";
 import { logAudit } from "@/lib/audit/log";
+import { sendNudgeMessage } from "@/lib/messages/system";
 import type { UserRole } from "@/lib/constants/roles";
+
+const NUDGE_REASON_TEXT: Record<string, string> = {
+  stalled_activity: "I noticed your activity has stalled this week.",
+  below_goal_pace: "You're tracking a bit below your goal pace.",
+  stalled_training:
+    "Looks like your training has stalled — let's keep it going.",
+  custom: "Checking in.",
+};
 
 /**
  * Coaching mutations. Notes/nudges/cross-agent goals require coach privileges
@@ -136,6 +145,38 @@ export async function sendNudge(input: unknown): Promise<CoachingResult> {
     return { ok: false, error: "That agent isn't on your team." };
   }
 
+  const service = createServiceClient();
+
+  // Resolve the company that owns the DM thread (the agent's company; for a
+  // super_admin coach with no company of their own, use the agent's).
+  let companyId = c.companyId;
+  if (!companyId) {
+    const { data: agent } = await service
+      .from("users")
+      .select("company_id")
+      .eq("id", parsed.data.agentUserId)
+      .single();
+    companyId = agent?.company_id ?? null;
+  }
+  if (!companyId) return { ok: false, error: "No company context." };
+
+  // Decision 9: the nudge is now a real chat message in the coach↔agent DM.
+  const custom = parsed.data.customMessage?.trim();
+  const body = custom
+    ? `👋 ${NUDGE_REASON_TEXT[parsed.data.reason] ?? "Checking in."}\n\n${custom}`
+    : `👋 ${NUDGE_REASON_TEXT[parsed.data.reason] ?? "Checking in."}`;
+  const sent = await sendNudgeMessage(service, {
+    companyId,
+    fromUserId: c.userId,
+    toUserId: parsed.data.agentUserId,
+    contextType: "coaching_nudge",
+    contextPayload: {
+      reason: parsed.data.reason,
+      custom_message: custom ?? "",
+    },
+    body,
+  });
+
   await notify([
     {
       userId: parsed.data.agentUserId,
@@ -143,9 +184,27 @@ export async function sendNudge(input: unknown): Promise<CoachingResult> {
       kind: "coaching_nudge",
       payload: {
         reason: parsed.data.reason,
-        custom_message: parsed.data.customMessage ?? "",
+        custom_message: custom ?? "",
+        ...(sent
+          ? { thread_id: sent.threadId, message_id: sent.messageId }
+          : {}),
       },
     },
+    // Also surface it as a chat-message notification (spec: both fire).
+    ...(sent
+      ? [
+          {
+            userId: parsed.data.agentUserId,
+            actorId: c.userId,
+            kind: "message_received" as const,
+            payload: {
+              thread_id: sent.threadId,
+              message_id: sent.messageId,
+              sender_id: c.userId,
+            },
+          },
+        ]
+      : []),
   ]);
   await logAudit({
     actor_user_id: c.userId,
@@ -155,6 +214,7 @@ export async function sendNudge(input: unknown): Promise<CoachingResult> {
     metadata: { reason: parsed.data.reason },
   });
   revalidatePath("/app/coaching");
+  revalidatePath("/app/messages");
   return { ok: true };
 }
 
