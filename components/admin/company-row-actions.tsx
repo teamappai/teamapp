@@ -28,7 +28,14 @@ import {
   type AdminActionResult,
 } from "@/app/app/admin/actions";
 
-type CompanyStatus = "trialing" | "active" | "past_due" | "canceled" | "paused";
+type CompanyStatus =
+  | "trialing"
+  | "active"
+  | "past_due"
+  | "canceled"
+  | "paused"
+  | "cancellation_scheduled"
+  | "suspended";
 
 export function CompanyRowActions({
   companyId,

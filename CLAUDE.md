@@ -21,14 +21,24 @@ Canonical pricing lives in [`lib/billing/plans.ts`](lib/billing/plans.ts).
 All money is stored as integer **cents** (never floats). Current plans (base
 monthly price, for quick human reference only — the file is authoritative):
 
-| Plan id     | Monthly | Included seats |
-| ----------- | ------- | -------------- |
-| `launch`    | $250    | 10             |
-| `pro`       | $595    | 25             |
-| `brokerage` | $1,500  | 100            |
+| Plan id      | Monthly | Annual    | Included seats | Extra seat       |
+| ------------ | ------- | --------- | -------------- | ---------------- |
+| `launch`     | $245    | $2,450/yr | 5              | $25/mo · $250/yr |
+| `pro`        | $595    | $5,950/yr | 25             | $20/mo · $200/yr |
+| `enterprise` | custom  | custom    | 50+            | sales-managed    |
 
-Annual billing is ~20% off 12× monthly. Stripe price IDs in `plans.ts` are
-`null` and get filled in during Phase 12.
+Annual billing is **2 months free** (annual = 10× monthly), shown as a
+per-month equivalent on plan cards ("$204/month, billed yearly at $2,450" for
+Launch; "$496/month … $5,950" for Pro). `enterprise` (renamed from `brokerage`)
+is sales-managed: "Custom pricing", "Talk to sales", no Stripe price ID.
+
+**Stripe (Phase 12):** Price IDs live in the environment (server-only), mapped
+in [`lib/billing/env.ts`](lib/billing/env.ts) — NOT in `plans.ts` (which is
+client-importable). Set `STRIPE_PRICE_LAUNCH_MONTHLY`, `…_LAUNCH_ANNUAL`,
+`…_LAUNCH_EXTRA_SEAT`, `…_PRO_MONTHLY`, `…_PRO_ANNUAL`, `…_PRO_EXTRA_SEAT` plus
+`STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` /
+`NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` (see `.env.local.example`). Webhook:
+`/api/stripe/webhook`.
 
 ## Tech stack
 

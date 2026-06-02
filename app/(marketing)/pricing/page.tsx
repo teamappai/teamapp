@@ -18,7 +18,7 @@ export function generateMetadata(): Metadata {
   return pageMetadata({
     title: "Pricing | TeamApp",
     description:
-      "Simple, seat-based pricing for real estate teams of every size. Launch, Pro, and Brokerage plans with 20% off annual billing.",
+      "Simple, seat-based pricing for real estate teams of every size. Launch, Pro, and Enterprise plans — get 2 months free with annual billing.",
     path: "/pricing",
   });
 }
@@ -30,7 +30,7 @@ const FAQS = [
   },
   {
     q: "What's the difference between monthly and annual billing?",
-    a: "Annual billing is paid once per year and works out to 20% less than paying monthly. You can switch between cycles as your needs change.",
+    a: "Annual billing is paid once per year and gives you 2 months free versus paying monthly. You can switch between cycles as your needs change.",
   },
   {
     q: "Is there a free trial?",

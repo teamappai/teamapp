@@ -4,32 +4,45 @@
  * All pricing displays in marketing, app billing UI, Stripe products, and
  * analytics MUST read from this file. Hardcoding prices anywhere else is a bug.
  *
- * Money is stored as integer cents everywhere (never floats). Stripe price IDs
- * are null until Phase 12 wires up Stripe products.
+ * Money is stored as integer cents everywhere (never floats).
+ *
+ * Stripe price IDs are intentionally NOT here — they are server-only secrets
+ * read from the environment in `lib/billing/price-map.ts` (server-only). This
+ * file is safe to import from client components.
+ *
+ * Phase 12 canonical structure:
+ *   • Launch — $245/mo, 5 seats, +$25/seat/mo. Annual $2,450/yr ("2 months
+ *     free" → $204/mo equivalent), +$250/seat/yr.
+ *   • Pro — $595/mo, 25 seats, +$20/seat/mo. Annual $5,950/yr ("2 months
+ *     free" → $496/mo equivalent), +$200/seat/yr.
+ *   • Enterprise — custom pricing (sales-managed), 50+ seats, no Stripe price.
  */
 
-export type PlanId = "launch" | "pro" | "brokerage";
+export type PlanId = "launch" | "pro" | "enterprise";
 export type BillingCycle = "monthly" | "annual";
 
 export interface Plan {
   id: PlanId;
   display_name: string;
   tagline: string;
-  /** Base subscription price per month, in cents. */
+  /** Enterprise is sales-managed: no self-serve price, render "Custom pricing". */
+  custom: boolean;
+  /** Suggested fit blurb (used by Enterprise). */
+  fit?: string;
+  /** Base subscription price per month, in cents. 0 for custom plans. */
   monthly_price_cents: number;
   /** Base subscription price for a full year (paid annually), in cents. */
   annual_price_cents: number;
   /** Seats bundled into the base price. */
   included_seats: number;
-  /** Price per additional seat per month (monthly billing), in cents. */
+  /**
+   * Price per additional seat per MONTH, in cents. Extra seats are ALWAYS
+   * billed monthly and ALWAYS displayed monthly — even on an annual base plan
+   * (industry standard: Notion/Linear/Figma). There is no annual seat figure on
+   * purpose: "$250/seat/year" reads as sticker shock vs the identical
+   * "$25/seat/month" and dampens our primary expansion lever.
+   */
   additional_seat_price_cents: number;
-  /** Price per additional seat for a full year (annual billing), in cents. */
-  additional_seat_annual_price_cents: number;
-  /** Stripe price IDs — populated in Phase 12. */
-  stripe_monthly_price_id: string | null;
-  stripe_annual_price_id: string | null;
-  stripe_additional_seat_monthly_price_id: string | null;
-  stripe_additional_seat_annual_price_id: string | null;
 }
 
 export const PLANS: Record<PlanId, Plan> = {
@@ -37,58 +50,57 @@ export const PLANS: Record<PlanId, Plan> = {
     id: "launch",
     display_name: "Launch",
     tagline: "For new teams getting off the ground.",
-    monthly_price_cents: 25_000, // $250/mo
-    annual_price_cents: 240_000, // $240/mo × 12 = $2,400 (20% off)
-    included_seats: 10,
-    additional_seat_price_cents: 2_500, // $25/seat/mo
-    additional_seat_annual_price_cents: 24_000, // $20/seat/mo × 12 = $240 (20% off)
-    stripe_monthly_price_id: null,
-    stripe_annual_price_id: null,
-    stripe_additional_seat_monthly_price_id: null,
-    stripe_additional_seat_annual_price_id: null,
+    custom: false,
+    monthly_price_cents: 24_500, // $245/mo
+    annual_price_cents: 245_000, // $2,450/yr = 10 × $245 (2 months free)
+    included_seats: 5,
+    additional_seat_price_cents: 2_500, // $25/seat/mo (always billed monthly)
   },
   pro: {
     id: "pro",
     display_name: "Pro",
     tagline: "For growing teams that need more seats and structure.",
+    custom: false,
     monthly_price_cents: 59_500, // $595/mo
-    annual_price_cents: 571_200, // $476/mo × 12 = $5,712 (20% off)
+    annual_price_cents: 595_000, // $5,950/yr = 10 × $595 (2 months free)
     included_seats: 25,
-    additional_seat_price_cents: 1_500, // $15/seat/mo
-    additional_seat_annual_price_cents: 14_400, // $12/seat/mo × 12 = $144 (20% off)
-    stripe_monthly_price_id: null,
-    stripe_annual_price_id: null,
-    stripe_additional_seat_monthly_price_id: null,
-    stripe_additional_seat_annual_price_id: null,
+    additional_seat_price_cents: 2_000, // $20/seat/mo (always billed monthly)
   },
-  brokerage: {
-    id: "brokerage",
-    display_name: "Brokerage",
-    tagline: "For brokerages running many agents at scale.",
-    monthly_price_cents: 150_000, // $1,500/mo
-    annual_price_cents: 1_440_000, // $1,200/mo × 12 = $14,400 (20% off)
-    included_seats: 100,
-    additional_seat_price_cents: 1_000, // $10/seat/mo
-    additional_seat_annual_price_cents: 9_600, // $8/seat/mo × 12 = $96 (20% off)
-    stripe_monthly_price_id: null,
-    stripe_annual_price_id: null,
-    stripe_additional_seat_monthly_price_id: null,
-    stripe_additional_seat_annual_price_id: null,
+  enterprise: {
+    id: "enterprise",
+    display_name: "Enterprise",
+    tagline: "For brokerages running many teams at scale.",
+    custom: true,
+    fit: "50+ team members",
+    monthly_price_cents: 0, // custom — sales contract
+    annual_price_cents: 0,
+    included_seats: 50,
+    additional_seat_price_cents: 0,
   },
 };
 
 /** Ordered list of plans for display (cheapest → most expensive). */
-export const PLAN_ORDER: readonly PlanId[] = ["launch", "pro", "brokerage"];
+export const PLAN_ORDER: readonly PlanId[] = ["launch", "pro", "enterprise"];
+
+/** Plans that support self-serve Stripe checkout/upgrade (exclude Enterprise). */
+export const SELF_SERVE_PLANS: readonly PlanId[] = ["launch", "pro"];
 
 /** Look up a plan by id. */
 export function getPlan(id: PlanId): Plan {
   return PLANS[id];
 }
 
+/** Rank a plan for upgrade/downgrade comparisons (launch < pro < enterprise). */
+export function planRank(id: PlanId): number {
+  return PLAN_ORDER.indexOf(id);
+}
+
 /**
- * Total price in CENTS for a plan at a given billing cycle and seat count.
- * Seats at or below the plan's included_seats incur no per-seat charge;
- * seats beyond that are billed at the cycle's additional-seat rate.
+ * Total recurring price in CENTS for a plan at a given billing cycle and seat
+ * count. The base is annual or monthly per `cycle`; extra seats are ALWAYS
+ * priced monthly (they bill monthly even on annual plans), so for an annual
+ * base this returns a mixed-cadence figure — display the base and the monthly
+ * seat overage separately rather than as one number.
  */
 export function calculatePrice(
   planId: PlanId,
@@ -98,18 +110,37 @@ export function calculatePrice(
   const plan = getPlan(planId);
   const base =
     cycle === "annual" ? plan.annual_price_cents : plan.monthly_price_cents;
-  const extraSeats = Math.max(0, Math.ceil(seats) - plan.included_seats);
-  const seatRate =
-    cycle === "annual"
-      ? plan.additional_seat_annual_price_cents
-      : plan.additional_seat_price_cents;
-  return base + extraSeats * seatRate;
+  return base + extraSeats(planId, seats) * plan.additional_seat_price_cents;
+}
+
+/** Number of additional (paid) seats beyond the plan's included allotment. */
+export function extraSeats(planId: PlanId, seatsTotal: number): number {
+  return Math.max(0, Math.ceil(seatsTotal) - getPlan(planId).included_seats);
+}
+
+/** Monthly cost in CENTS of the extra seats beyond the included allotment. */
+export function extraSeatsMonthlyCents(
+  planId: PlanId,
+  seatsTotal: number,
+): number {
+  return (
+    extraSeats(planId, seatsTotal) * getPlan(planId).additional_seat_price_cents
+  );
 }
 
 /**
- * Format integer cents as a human-readable USD string.
- * Whole-dollar amounts omit decimals ("$250"); otherwise two decimals
- * ("$250.50"). Integer math only — no floating point.
+ * Per-month-equivalent of an annual plan, rounded to a whole dollar (in cents):
+ * Launch → $204, Pro → $496. This is the headline figure shown on annual plan
+ * cards ("$204/month, billed yearly").
+ */
+export function annualMonthlyEquivalentCents(plan: Plan): number {
+  return Math.round(plan.annual_price_cents / 12 / 100) * 100;
+}
+
+/**
+ * Format integer cents as a human-readable USD string. Symbol always on the
+ * LEFT (audit F-101); whole-dollar amounts omit decimals ("$245"); otherwise
+ * two decimals ("$245.50"). Integer math only — no floating point.
  */
 export function formatPrice(cents: number): string {
   const negative = cents < 0;
@@ -124,7 +155,7 @@ export function formatPrice(cents: number): string {
 
 /**
  * Actual annual discount versus paying 12× the monthly price, as a percentage
- * (e.g. 20 for "20% off"). Rounded to one decimal place.
+ * (e.g. 16.7 for the "2 months free" model). Rounded to one decimal place.
  */
 export function annualDiscountPct(plan: Plan): number {
   const monthlyForYear = plan.monthly_price_cents * 12;

@@ -177,6 +177,11 @@ async function main(): Promise<void> {
         plan: COMPANY_PLAN,
         seats_total: plan.included_seats,
         status: "active",
+        billing_cycle: "monthly",
+        // Renews 30 days out so the Billing overview shows a real date.
+        current_period_end: new Date(
+          Date.now() + 30 * 24 * 60 * 60 * 1000,
+        ).toISOString(),
         signed_up_source: "seed",
         // HomeReady shows the full leaderboard to agents (Phase 10).
         leaderboard_visible_to_agents: true,
@@ -286,6 +291,29 @@ async function main(): Promise<void> {
     .from("coaching_log_entries")
     .delete()
     .in("agent_user_id", [agentId]);
+  await admin.from("cancellations").delete().eq("company_id", companyId);
+
+  // Sample cancellation reasons for super-admin reporting visualization.
+  await admin.from("cancellations").insert([
+    {
+      company_id: companyId,
+      user_id: teamLeadId,
+      reason_category: "price",
+      optional_feedback:
+        "Loved the product but the budget got cut this quarter.",
+      scheduled_for: daysAgoDate(40),
+      completed_at: new Date(
+        Date.now() - 38 * 24 * 60 * 60 * 1000,
+      ).toISOString(),
+    },
+    {
+      company_id: companyId,
+      user_id: teamLeadId,
+      reason_category: "switching",
+      reason_text: "Evaluated a competitor",
+      scheduled_for: daysAgoDate(12),
+    },
+  ]);
 
   // 7) training: 3 sections (varying visibility) x 3 modules
   const sectionSpecs: Array<{

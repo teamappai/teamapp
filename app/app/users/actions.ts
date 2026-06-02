@@ -22,13 +22,75 @@ import {
   type BulkInviteInput,
   type EditUserInput,
 } from "@/lib/validations/team";
+import { createServiceClient } from "@/lib/supabase/service";
+import {
+  getSeatUsage,
+  nextPlanUp,
+  perSeatMonthlyCents,
+} from "@/lib/billing/seats";
+import { getPlan, type PlanId } from "@/lib/billing/plans";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+
+/** Structured seat-cap rejection so the invite UI can surface upgrade options. */
+export type SeatLimitInfo = {
+  used: number;
+  total: number;
+  requested: number;
+  available: number;
+  plan: PlanId;
+  planName: string;
+  nextPlan: PlanId | null;
+  nextPlanName: string | null;
+  perSeatMonthlyCents: number;
+};
 
 export type ActionResult =
   | { ok: true }
   | { ok: true; count: number }
-  | { ok: false; error: string };
+  | { ok: false; error: string; seatLimit?: SeatLimitInfo };
+
+/**
+ * Hard seat-cap enforcement (Decision 4 — C). Rejects when the company can't
+ * absorb `requested` new invites, returning upgrade/add-seat context for the
+ * invite modal. Pending invites count toward usage (see getSeatUsage).
+ */
+async function checkSeatCapacity(
+  companyId: string,
+  requested: number,
+): Promise<
+  { ok: true } | { ok: false; error: string; seatLimit: SeatLimitInfo }
+> {
+  const service = createServiceClient();
+  const { data: company } = await service
+    .from("companies")
+    .select("plan, seats_total")
+    .eq("id", companyId)
+    .maybeSingle();
+
+  const plan = (company?.plan ?? "launch") as PlanId;
+  const seatsTotal = company?.seats_total ?? 0;
+  const usage = await getSeatUsage(companyId, seatsTotal);
+
+  if (usage.available >= requested) return { ok: true };
+
+  const next = nextPlanUp(plan);
+  return {
+    ok: false,
+    error: "You've reached your seat limit. Add seats from Billing.",
+    seatLimit: {
+      used: usage.used,
+      total: usage.total,
+      requested,
+      available: usage.available,
+      plan,
+      planName: getPlan(plan).display_name,
+      nextPlan: next,
+      nextPlanName: next ? getPlan(next).display_name : null,
+      perSeatMonthlyCents: perSeatMonthlyCents(plan),
+    },
+  };
+}
 
 type InviteContext = {
   companyId: string;
@@ -103,6 +165,9 @@ export async function inviteSingle(
     };
   }
 
+  const seats = await checkSeatCapacity(ctx.companyId, 1);
+  if (!seats.ok) return seats;
+
   const created = await createInvitation({
     companyId: ctx.companyId,
     email,
@@ -176,6 +241,9 @@ export async function inviteBulk(
         .join(", ")}`,
     };
   }
+
+  const seats = await checkSeatCapacity(ctx.companyId, rows.length);
+  if (!seats.ok) return seats;
 
   const sentRecipients: SummaryRecipient[] = [];
   const failures: string[] = [];

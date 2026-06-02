@@ -172,6 +172,71 @@ export type Database = {
           },
         ]
       }
+      cancellations: {
+        Row: {
+          company_id: string
+          completed_at: string | null
+          created_at: string
+          id: string
+          optional_feedback: string | null
+          reason_category: string
+          reason_text: string | null
+          scheduled_for: string
+          user_id: string | null
+        }
+        Insert: {
+          company_id: string
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          optional_feedback?: string | null
+          reason_category: string
+          reason_text?: string | null
+          scheduled_for: string
+          user_id?: string | null
+        }
+        Update: {
+          company_id?: string
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          optional_feedback?: string | null
+          reason_category?: string
+          reason_text?: string | null
+          scheduled_for?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cancellations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "active_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cancellations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cancellations_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "active_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cancellations_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       coaching_log_entries: {
         Row: {
           agent_user_id: string
@@ -236,10 +301,13 @@ export type Database = {
       }
       companies: {
         Row: {
+          billing_cycle: string | null
           brokerage_license_number: string | null
           brokerage_name: string | null
           brokerage_state: string | null
+          cancellation_scheduled_for: string | null
           created_at: string
+          current_period_end: string | null
           deleted_at: string | null
           id: string
           leaderboard_visible_to_agents: boolean
@@ -256,10 +324,13 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          billing_cycle?: string | null
           brokerage_license_number?: string | null
           brokerage_name?: string | null
           brokerage_state?: string | null
+          cancellation_scheduled_for?: string | null
           created_at?: string
+          current_period_end?: string | null
           deleted_at?: string | null
           id?: string
           leaderboard_visible_to_agents?: boolean
@@ -276,10 +347,13 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          billing_cycle?: string | null
           brokerage_license_number?: string | null
           brokerage_name?: string | null
           brokerage_state?: string | null
+          cancellation_scheduled_for?: string | null
           created_at?: string
+          current_period_end?: string | null
           deleted_at?: string | null
           id?: string
           leaderboard_visible_to_agents?: boolean
@@ -1562,6 +1636,7 @@ export type Database = {
           created_at: string
           event_type: string | null
           id: string
+          notification_sent: boolean
           payload: Json | null
           processed_at: string | null
           stripe_event_id: string
@@ -1571,6 +1646,7 @@ export type Database = {
           created_at?: string
           event_type?: string | null
           id?: string
+          notification_sent?: boolean
           payload?: Json | null
           processed_at?: string | null
           stripe_event_id: string
@@ -1580,6 +1656,7 @@ export type Database = {
           created_at?: string
           event_type?: string | null
           id?: string
+          notification_sent?: boolean
           payload?: Json | null
           processed_at?: string | null
           stripe_event_id?: string
@@ -2624,8 +2701,15 @@ export type Database = {
       is_thread_participant: { Args: { tid: string }; Returns: boolean }
     }
     Enums: {
-      company_plan: "launch" | "pro" | "brokerage"
-      company_status: "trialing" | "active" | "past_due" | "canceled" | "paused"
+      company_plan: "launch" | "pro" | "enterprise"
+      company_status:
+        | "trialing"
+        | "active"
+        | "past_due"
+        | "canceled"
+        | "paused"
+        | "cancellation_scheduled"
+        | "suspended"
       deal_activity_event:
         | "created"
         | "stage_changed"
@@ -2791,8 +2875,16 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      company_plan: ["launch", "pro", "brokerage"],
-      company_status: ["trialing", "active", "past_due", "canceled", "paused"],
+      company_plan: ["launch", "pro", "enterprise"],
+      company_status: [
+        "trialing",
+        "active",
+        "past_due",
+        "canceled",
+        "paused",
+        "cancellation_scheduled",
+        "suspended",
+      ],
       deal_activity_event: [
         "created",
         "stage_changed",

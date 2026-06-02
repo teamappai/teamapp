@@ -35,7 +35,23 @@ export type AuditAction =
   | "message_thread_renamed"
   | "message_participant_added"
   | "message_participant_removed"
-  | "message_thread_left";
+  | "message_thread_left"
+  // Billing (Phase 12)
+  | "subscription_created"
+  | "plan_upgraded"
+  | "plan_downgraded"
+  | "downgrade_scheduled"
+  | "seats_changed"
+  | "subscription_paused"
+  | "subscription_resumed"
+  | "payment_failed"
+  | "payment_recovered"
+  | "cancellation_scheduled"
+  | "cancellation_completed"
+  | "seats_threshold_notified"
+  | "admin_trial_extended"
+  | "admin_credit_applied"
+  | "admin_company_suspended";
 
 export type AuditResourceType =
   | "company"
@@ -48,7 +64,9 @@ export type AuditResourceType =
   | "activity_log"
   | "coaching_note"
   | "message"
-  | "message_thread";
+  | "message_thread"
+  | "subscription"
+  | "cancellation";
 
 export type LogAuditInput = {
   actor_user_id: string;
