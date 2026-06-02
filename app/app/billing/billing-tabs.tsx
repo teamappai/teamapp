@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
   CreditCard,
@@ -72,7 +72,11 @@ function daysUntil(iso: string | null): number | null {
 }
 
 export function BillingTabs({ data }: { data: BillingData }) {
-  const [tab, setTab] = React.useState("overview");
+  // Deep-link support: /app/billing?tab=plans opens the Plans tab directly
+  // (used by the playbook plan-cap modal's "Upgrade to Pro" CTA).
+  const searchParams = useSearchParams();
+  const initialTab = searchParams.get("tab") === "plans" ? "plans" : "overview";
+  const [tab, setTab] = React.useState(initialTab);
 
   return (
     <Tabs value={tab} onValueChange={setTab}>

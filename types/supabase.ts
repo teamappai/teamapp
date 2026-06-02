@@ -1292,6 +1292,232 @@ export type Database = {
           },
         ]
       }
+      playbook_installs: {
+        Row: {
+          company_id: string
+          id: string
+          installed_at: string
+          installed_by_user_id: string | null
+          playbook_id: string
+          uninstalled_at: string | null
+        }
+        Insert: {
+          company_id: string
+          id?: string
+          installed_at?: string
+          installed_by_user_id?: string | null
+          playbook_id: string
+          uninstalled_at?: string | null
+        }
+        Update: {
+          company_id?: string
+          id?: string
+          installed_at?: string
+          installed_by_user_id?: string | null
+          playbook_id?: string
+          uninstalled_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "playbook_installs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "active_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "playbook_installs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "playbook_installs_installed_by_user_id_fkey"
+            columns: ["installed_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "active_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "playbook_installs_installed_by_user_id_fkey"
+            columns: ["installed_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "playbook_installs_playbook_id_fkey"
+            columns: ["playbook_id"]
+            isOneToOne: false
+            referencedRelation: "playbooks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      playbook_training_modules: {
+        Row: {
+          content: Json
+          created_at: string
+          description: string | null
+          estimated_minutes: number | null
+          id: string
+          playbook_section_id: string
+          position: number
+          title: string
+          updated_at: string
+          visible_to_roles: Database["public"]["Enums"]["user_role"][] | null
+        }
+        Insert: {
+          content?: Json
+          created_at?: string
+          description?: string | null
+          estimated_minutes?: number | null
+          id?: string
+          playbook_section_id: string
+          position: number
+          title: string
+          updated_at?: string
+          visible_to_roles?: Database["public"]["Enums"]["user_role"][] | null
+        }
+        Update: {
+          content?: Json
+          created_at?: string
+          description?: string | null
+          estimated_minutes?: number | null
+          id?: string
+          playbook_section_id?: string
+          position?: number
+          title?: string
+          updated_at?: string
+          visible_to_roles?: Database["public"]["Enums"]["user_role"][] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "playbook_training_modules_playbook_section_id_fkey"
+            columns: ["playbook_section_id"]
+            isOneToOne: false
+            referencedRelation: "playbook_training_sections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      playbook_training_sections: {
+        Row: {
+          created_at: string
+          description: string | null
+          estimated_minutes: number | null
+          id: string
+          playbook_id: string
+          position: number
+          recommended_timeline_days: number | null
+          title: string
+          updated_at: string
+          visible_to_roles: Database["public"]["Enums"]["user_role"][]
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          estimated_minutes?: number | null
+          id?: string
+          playbook_id: string
+          position: number
+          recommended_timeline_days?: number | null
+          title: string
+          updated_at?: string
+          visible_to_roles?: Database["public"]["Enums"]["user_role"][]
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          estimated_minutes?: number | null
+          id?: string
+          playbook_id?: string
+          position?: number
+          recommended_timeline_days?: number | null
+          title?: string
+          updated_at?: string
+          visible_to_roles?: Database["public"]["Enums"]["user_role"][]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "playbook_training_sections_playbook_id_fkey"
+            columns: ["playbook_id"]
+            isOneToOne: false
+            referencedRelation: "playbooks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      playbooks: {
+        Row: {
+          category: string
+          cover_gradient: string | null
+          created_at: string
+          created_by_user_id: string | null
+          credit_text: string | null
+          description: string | null
+          icon_name: string | null
+          id: string
+          install_count: number
+          published_at: string | null
+          recommended_for_onboarding: boolean
+          slug: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          cover_gradient?: string | null
+          created_at?: string
+          created_by_user_id?: string | null
+          credit_text?: string | null
+          description?: string | null
+          icon_name?: string | null
+          id?: string
+          install_count?: number
+          published_at?: string | null
+          recommended_for_onboarding?: boolean
+          slug: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          cover_gradient?: string | null
+          created_at?: string
+          created_by_user_id?: string | null
+          credit_text?: string | null
+          description?: string | null
+          icon_name?: string | null
+          id?: string
+          install_count?: number
+          published_at?: string | null
+          recommended_for_onboarding?: boolean
+          slug?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "playbooks_created_by_user_id_fkey"
+            columns: ["created_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "active_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "playbooks_created_by_user_id_fkey"
+            columns: ["created_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       request_comments: {
         Row: {
           body: string
@@ -1867,6 +2093,53 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      training_section_source: {
+        Row: {
+          playbook_install_id: string
+          source_playbook_section_id: string
+          training_section_id: string
+        }
+        Insert: {
+          playbook_install_id: string
+          source_playbook_section_id: string
+          training_section_id: string
+        }
+        Update: {
+          playbook_install_id?: string
+          source_playbook_section_id?: string
+          training_section_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_section_source_playbook_install_id_fkey"
+            columns: ["playbook_install_id"]
+            isOneToOne: false
+            referencedRelation: "playbook_installs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_section_source_source_playbook_section_id_fkey"
+            columns: ["source_playbook_section_id"]
+            isOneToOne: false
+            referencedRelation: "playbook_training_sections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_section_source_training_section_id_fkey"
+            columns: ["training_section_id"]
+            isOneToOne: true
+            referencedRelation: "active_training_sections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_section_source_training_section_id_fkey"
+            columns: ["training_section_id"]
+            isOneToOne: true
+            referencedRelation: "training_sections"
             referencedColumns: ["id"]
           },
         ]

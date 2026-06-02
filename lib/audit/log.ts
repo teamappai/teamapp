@@ -56,7 +56,14 @@ export type AuditAction =
   | "seats_threshold_notified"
   | "admin_trial_extended"
   | "admin_credit_applied"
-  | "admin_company_suspended";
+  | "admin_company_suspended"
+  // Playbook library (Phase 12.5)
+  | "playbook_viewed"
+  | "playbook_installed"
+  | "playbook_uninstalled"
+  | "playbook_install_blocked_by_cap"
+  | "playbook_published"
+  | "playbook_archived";
 
 export type AuditResourceType =
   | "company"
@@ -71,7 +78,8 @@ export type AuditResourceType =
   | "message"
   | "message_thread"
   | "subscription"
-  | "cancellation";
+  | "cancellation"
+  | "playbook";
 
 export type LogAuditInput = {
   actor_user_id: string;
