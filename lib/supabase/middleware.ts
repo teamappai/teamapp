@@ -171,6 +171,20 @@ export async function updateSession(request: NextRequest) {
     return forbid("/not-authorized");
   }
 
+  // Playbook library (Phase 12.5). Customer-facing browse + install is for
+  // team_lead and admin_tc; super_admin gets a read-only "preview as customer".
+  // agent and marketing have no access and are sent to their dashboard. The
+  // super-admin authoring console under /app/admin/playbooks is already gated by
+  // the /app/admin block above.
+  if (
+    pathname.startsWith("/app/playbooks") &&
+    role !== "team_lead" &&
+    role !== "admin_tc" &&
+    role !== "super_admin"
+  ) {
+    return redirectTo("/app/dashboard");
+  }
+
   if (
     isAppRoute &&
     role === "super_admin" &&

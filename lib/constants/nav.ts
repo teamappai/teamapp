@@ -21,6 +21,7 @@ export type NavIconKey =
   | "training"
   | "messages"
   | "managementHub"
+  | "playbooks"
   | "featureFlags"
   | "auditLog"
   | "billing"
@@ -53,6 +54,11 @@ const NAV_BY_ROLE: Record<UserRole, NavItem[]> = {
     // cannot create deals (F-031), so no CTA is wired below for this role.
     { href: "/app/deals", label: "Deals", icon: "deals" },
     { href: "/app/requests", label: "Requests", icon: "requests" },
+    {
+      href: "/app/admin/playbooks",
+      label: "Playbook Library",
+      icon: "playbooks",
+    },
     { href: "/app/admin/flags", label: "Feature Flags", icon: "featureFlags" },
     { href: "/app/admin/audit", label: "Audit Log", icon: "auditLog" },
   ],
@@ -67,6 +73,7 @@ const NAV_BY_ROLE: Record<UserRole, NavItem[]> = {
     { href: "/app/deals", label: "Deals", icon: "deals" },
     { href: "/app/requests", label: "Requests", icon: "requests" },
     { href: "/app/training", label: "Training", icon: "training" },
+    { href: "/app/playbooks", label: "Playbooks", icon: "playbooks" },
     { href: "/app/messages", label: "Messages", icon: "messages" },
     { href: "/app/users", label: "Users", icon: "users" },
     { href: "/app/management", label: "Management Hub", icon: "managementHub" },
@@ -97,6 +104,7 @@ const NAV_BY_ROLE: Record<UserRole, NavItem[]> = {
     { href: "/app/requests", label: "Requests", icon: "requests" },
     { href: "/app/deals", label: "Deals", icon: "deals" },
     { href: "/app/training", label: "Training", icon: "training" },
+    { href: "/app/playbooks", label: "Playbooks", icon: "playbooks" },
     { href: "/app/messages", label: "Messages", icon: "messages" },
   ],
   marketing: [

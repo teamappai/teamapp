@@ -1214,6 +1214,227 @@ async function main(): Promise<void> {
     "• Channels: #general, #wins, #deals, #marketing-requests, #leadership (private)",
   );
 
+  // 11d) Curated Playbook Library (Phase 12.5). TeamApp-owned content customers
+  // install into their workspace. Reset globally each seed (RESTRICT FK means
+  // installs must go first), then create 3 published + 1 draft playbook and
+  // pre-install playbook 1 into HomeReady so the "already installed" state and
+  // the Installed tab are demonstrable.
+  const NIL_UUID = "00000000-0000-0000-0000-000000000000";
+  await admin.from("playbook_installs").delete().neq("id", NIL_UUID);
+  await admin.from("playbooks").delete().neq("id", NIL_UUID);
+
+  type PlaybookSpec = {
+    slug: string;
+    title: string;
+    description: string;
+    category: string;
+    icon: string;
+    gradient: string;
+    credit: string;
+    recommended: boolean;
+    status: "published" | "draft";
+    sections: { title: string; modules: number }[];
+  };
+
+  const playbookSpecs: PlaybookSpec[] = [
+    {
+      slug: "new-agent-30-day-onboarding",
+      title: "New Agent 30-Day Onboarding",
+      description:
+        "A proven 30-day ramp for brand-new agents: systems, scripts, and first-deal fundamentals.",
+      category: "Agent Onboarding",
+      icon: "Rocket",
+      gradient: "from-amber-500 to-orange-600",
+      credit: "Created by TeamApp",
+      recommended: true,
+      status: "published",
+      sections: [
+        { title: "Week 1 — Foundations", modules: 3 },
+        { title: "Week 2 — Lead Generation", modules: 3 },
+        { title: "Weeks 3-4 — First Deals", modules: 2 },
+      ],
+    },
+    {
+      slug: "zillow-flex-conversion-mastery",
+      title: "Zillow Flex Conversion Mastery",
+      description:
+        "Convert more Zillow Flex connections into closings with a tight speed-to-lead playbook.",
+      category: "Zillow Preferred",
+      icon: "Target",
+      gradient: "from-blue-500 to-indigo-600",
+      credit: "Created by Phil Kang, HomeReady Team",
+      recommended: true,
+      status: "published",
+      sections: [
+        { title: "Speed to Lead", modules: 3 },
+        { title: "Conversion Playbook", modules: 3 },
+      ],
+    },
+    {
+      slug: "ai-tools-for-lead-generation",
+      title: "AI Tools for Lead Generation",
+      description:
+        "Put modern AI tools to work generating and nurturing real-estate leads.",
+      category: "AI for Real Estate",
+      icon: "Bot",
+      gradient: "from-emerald-500 to-teal-600",
+      credit: "Created by Jordan Avery, Affiliate Real Estate",
+      recommended: false,
+      status: "published",
+      sections: [
+        { title: "AI Prospecting", modules: 3 },
+        { title: "AI Nurture & Follow-up", modules: 2 },
+      ],
+    },
+    {
+      slug: "team-leader-comp-structures",
+      title: "Team Leader Comp Structures",
+      description:
+        "Design commission splits and caps that attract and retain top producers.",
+      category: "Team Leader Playbooks",
+      icon: "DollarSign",
+      gradient: "from-violet-500 to-purple-600",
+      credit: "Created by TeamApp",
+      recommended: false,
+      status: "draft",
+      sections: [{ title: "Comp Models", modules: 3 }],
+    },
+  ];
+
+  const playbookIdsBySlug = new Map<string, string>();
+  for (const spec of playbookSpecs) {
+    const { data: pb, error: pbErr } = await admin
+      .from("playbooks")
+      .insert({
+        slug: spec.slug,
+        title: spec.title,
+        description: spec.description,
+        category: spec.category,
+        icon_name: spec.icon,
+        cover_gradient: spec.gradient,
+        credit_text: spec.credit,
+        recommended_for_onboarding: spec.recommended,
+        status: spec.status,
+        published_at: spec.status === "published" ? now : null,
+        created_by_user_id: superAdminId,
+      })
+      .select("id")
+      .single();
+    die(`insert playbook ${spec.slug}`, pbErr);
+    playbookIdsBySlug.set(spec.slug, pb!.id);
+
+    let sectionPos = 0;
+    for (const sec of spec.sections) {
+      const { data: pSection, error: psErr } = await admin
+        .from("playbook_training_sections")
+        .insert({
+          playbook_id: pb!.id,
+          title: sec.title,
+          description: `${sec.title} — curated by TeamApp.`,
+          position: sectionPos,
+          estimated_minutes: 45,
+          recommended_timeline_days: (sectionPos + 1) * 7,
+        })
+        .select("id")
+        .single();
+      die(`insert playbook section ${sec.title}`, psErr);
+      sectionPos += 1;
+
+      const moduleRows: Tables["playbook_training_modules"]["Insert"][] =
+        Array.from({ length: sec.modules }, (_, i) => ({
+          playbook_section_id: pSection!.id,
+          title: `${sec.title} — Lesson ${i + 1}`,
+          description: `Lesson ${i + 1} of ${sec.title}.`,
+          content: moduleContent(`${sec.title} — Lesson ${i + 1}`),
+          position: i,
+          estimated_minutes: 15 + i * 5,
+        }));
+      const { error: pmErr } = await admin
+        .from("playbook_training_modules")
+        .insert(moduleRows);
+      die(`insert playbook modules ${sec.title}`, pmErr);
+    }
+  }
+  console.log("• Playbooks: 3 published + 1 draft");
+
+  // Pre-install "New Agent 30-Day Onboarding" into HomeReady (deep-copy into
+  // training_* with source links, mirroring the install server action).
+  const installPlaybookId = playbookIdsBySlug.get(
+    "new-agent-30-day-onboarding",
+  )!;
+  const { data: installRow, error: instErr } = await admin
+    .from("playbook_installs")
+    .insert({
+      playbook_id: installPlaybookId,
+      company_id: companyId,
+      installed_by_user_id: teamLeadId,
+    })
+    .select("id")
+    .single();
+  die("insert playbook_install", instErr);
+
+  const { data: srcSections } = await admin
+    .from("playbook_training_sections")
+    .select("*")
+    .eq("playbook_id", installPlaybookId)
+    .order("position", { ascending: true });
+
+  // Append after the company's existing seeded training sections (positions 0-2).
+  let copyPos = 3;
+  let copiedModules = 0;
+  for (const src of srcSections ?? []) {
+    const { data: newSection, error: nsErr } = await admin
+      .from("training_sections")
+      .insert({
+        company_id: companyId,
+        title: src.title,
+        description: src.description,
+        visible_to_roles: src.visible_to_roles ?? [],
+        status: "published",
+        position: copyPos,
+        created_by: teamLeadId,
+      })
+      .select("id")
+      .single();
+    die(`copy install section ${src.title}`, nsErr);
+    copyPos += 1;
+
+    await admin.from("training_section_source").insert({
+      training_section_id: newSection!.id,
+      playbook_install_id: installRow!.id,
+      source_playbook_section_id: src.id,
+    });
+
+    const { data: srcModules } = await admin
+      .from("playbook_training_modules")
+      .select("*")
+      .eq("playbook_section_id", src.id)
+      .order("position", { ascending: true });
+    if (srcModules && srcModules.length) {
+      const { error: cmErr } = await admin.from("training_modules").insert(
+        srcModules.map((m, i) => ({
+          section_id: newSection!.id,
+          title: m.title,
+          description: m.description,
+          content: m.content,
+          estimated_minutes: m.estimated_minutes,
+          visible_to_roles: m.visible_to_roles ?? [],
+          status: "published" as const,
+          position: i,
+        })),
+      );
+      die(`copy install modules ${src.title}`, cmErr);
+      copiedModules += srcModules.length;
+    }
+  }
+  await admin
+    .from("playbooks")
+    .update({ install_count: 1 })
+    .eq("id", installPlaybookId);
+  console.log(
+    `• Pre-installed "New Agent 30-Day Onboarding" into HomeReady (${srcSections?.length ?? 0} sections, ${copiedModules} modules)`,
+  );
+
   // 12) platform feature flags (Phase 5 editor). Seeded disabled; consuming code
   // lands in later phases. Upsert by key so re-seeding is idempotent and never
   // clobbers an operator's toggles beyond re-asserting the canonical description.
