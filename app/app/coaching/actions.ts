@@ -331,3 +331,87 @@ export async function deleteGoal(id: string): Promise<CoachingResult> {
   revalidatePath("/app/coaching");
   return { ok: true };
 }
+
+// ── Coaching note replies (Phase 13) ─────────────────────────────────────────
+
+/**
+ * Reply to a coaching note. Allowed for the subject agent, any team_lead, or
+ * super_admin in the same company — admin_tc and other agents are excluded
+ * (Decision 3). Notifies the OTHER party (bell badge, kind='coaching_reply');
+ * no DM, no email (deferred to Phase 15). Uses the service client with explicit
+ * same-company + role checks, mirroring the rest of this file.
+ */
+export async function submitCoachingReply(
+  coachingLogId: string,
+  rawBody: string,
+): Promise<CoachingResult> {
+  const c = await ctx();
+  if (!c) return { ok: false, error: "Your session has expired." };
+
+  const body = (rawBody ?? "").trim();
+  if (body.length < 1) return { ok: false, error: "Write a reply first." };
+  if (body.length > 5000) {
+    return { ok: false, error: "Replies are limited to 5000 characters." };
+  }
+
+  const service = createServiceClient();
+  const { data: note } = await service
+    .from("coaching_log_entries")
+    .select("id, agent_user_id, coach_user_id")
+    .eq("id", coachingLogId)
+    .maybeSingle();
+  if (!note) return { ok: false, error: "Coaching note not found." };
+
+  // Same-company guard via the subject agent.
+  if (!(await sameCompany(c, note.agent_user_id))) {
+    return { ok: false, error: "That note isn't on your team." };
+  }
+
+  // Only the subject agent, a team_lead, or super_admin may reply (not admin_tc).
+  const isSubject = c.userId === note.agent_user_id;
+  const isTeamLead = c.role === "team_lead" || c.role === "super_admin";
+  if (!isSubject && !isTeamLead) {
+    return { ok: false, error: "You can't reply to this note." };
+  }
+
+  const { data: reply, error } = await service
+    .from("coaching_log_replies")
+    .insert({
+      coaching_log_entry_id: coachingLogId,
+      author_user_id: c.userId,
+      body,
+    })
+    .select("id")
+    .single();
+  if (error || !reply) return { ok: false, error: "Could not post the reply." };
+
+  // Notify the OTHER party. Agent replied → notify the original coach;
+  // coach replied → notify the subject agent.
+  const recipientId = isSubject ? note.coach_user_id : note.agent_user_id;
+  if (recipientId) {
+    await notify([
+      {
+        userId: recipientId,
+        actorId: c.userId,
+        kind: "coaching_reply",
+        payload: {
+          coaching_log_id: coachingLogId,
+          reply_id: reply.id,
+          reply_preview: body.slice(0, 120),
+        },
+      },
+    ]);
+  }
+
+  await logAudit({
+    actor_user_id: c.userId,
+    action: "coaching_reply_added",
+    resource_type: "coaching_note",
+    resource_id: coachingLogId,
+    metadata: { reply_id: reply.id },
+  });
+
+  revalidatePath("/app/coaching");
+  revalidatePath(`/app/users/${note.agent_user_id}`);
+  return { ok: true };
+}

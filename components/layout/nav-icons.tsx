@@ -10,9 +10,11 @@ import {
   LayoutGrid,
   Library,
   MessageSquare,
+  Plus,
   ScrollText,
   Shield,
   Target,
+  UserPlus,
   Users,
   type LucideIcon,
 } from "lucide-react";
@@ -27,6 +29,7 @@ export const NAV_ICONS: Record<NavIconKey, LucideIcon> = {
   users: Users,
   coaching: Target,
   deals: Briefcase,
+  deal: Briefcase,
   requests: Inbox,
   training: GraduationCap,
   messages: MessageSquare,
@@ -36,4 +39,6 @@ export const NAV_ICONS: Record<NavIconKey, LucideIcon> = {
   auditLog: ScrollText,
   billing: CreditCard,
   activityLog: Activity,
+  invite: UserPlus,
+  plus: Plus,
 };

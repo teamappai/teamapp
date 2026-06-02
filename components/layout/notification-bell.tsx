@@ -22,6 +22,7 @@ export type NotificationItem = {
   requestId: string | null;
   requestTitle: string | null;
   threadId: string | null;
+  coachingLogId: string | null;
   byName: string | null;
   claimed: boolean;
   read: boolean;
@@ -51,6 +52,8 @@ function describe(n: NotificationItem): string {
       return `${n.byName || "Your coach"} sent you a nudge`;
     case "training_nudge":
       return `${n.byName || "Your coach"} nudged you about training`;
+    case "coaching_reply":
+      return `${n.byName || "Someone"} replied to a coaching note`;
     default:
       return title;
   }
@@ -60,6 +63,9 @@ function describe(n: NotificationItem): string {
 function hrefFor(n: NotificationItem): string | null {
   if (n.kind === "message_channel_mention" && n.threadId) {
     return `/app/messages/channels/${n.threadId}`;
+  }
+  if (n.kind === "coaching_reply" && n.coachingLogId) {
+    return `/app/coaching?note=${n.coachingLogId}`;
   }
   if (n.threadId) return `/app/messages/${n.threadId}`;
   if (n.requestId) return `/app/requests/${n.requestId}`;

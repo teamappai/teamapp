@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { MessageSquarePlus, Trash2 } from "lucide-react";
 
 import type { CoachingEntry } from "@/lib/coaching/queries";
+import type { CoachingReply } from "@/lib/dashboards/drill-down";
 import { dayGroupLabel } from "@/lib/coaching/dates";
 import { formatDate } from "@/lib/utils/format";
 import { deleteCoachingNote } from "@/app/app/coaching/actions";
@@ -15,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/shared/empty-state";
 import { MessageSquare } from "lucide-react";
 import { CoachingNoteDialog } from "@/components/coaching/coaching-note-dialog";
+import { CoachingReplyThread } from "@/components/coaching/coaching-reply-thread";
 
 function timeOf(iso: string): string {
   return new Date(iso).toLocaleTimeString("en-US", {
@@ -35,16 +37,31 @@ export function CoachingLog({
   canAddNote,
   devMode,
   agents,
+  repliesByEntry,
+  repliesEnabled = false,
+  canReply = false,
+  expandNoteId,
 }: {
   entries: CoachingEntry[];
   canDelete: boolean;
   canAddNote: boolean;
   devMode: boolean;
   agents: { id: string; name: string }[];
+  /** Replies grouped by coaching-note id (Phase 13). */
+  repliesByEntry?: Record<string, CoachingReply[]>;
+  /** Whether reply threads render at all (hidden for admin_tc — Decision 3). */
+  repliesEnabled?: boolean;
+  /** Whether the viewer may post replies (subject agent or team_lead). */
+  canReply?: boolean;
+  /** A note id to auto-expand (deep link from the bell — ?note=…). */
+  expandNoteId?: string;
 }) {
   const [showTest, setShowTest] = React.useState(false);
   const [noteOpen, setNoteOpen] = React.useState(false);
   const [pending, startTransition] = React.useTransition();
+  const [expanded, setExpanded] = React.useState<Record<string, boolean>>(
+    expandNoteId ? { [expandNoteId]: true } : {},
+  );
 
   const visible = entries.filter((e) => showTest || !e.is_test);
 
@@ -139,6 +156,32 @@ export function CoachingLog({
                         ) : null}
                       </div>
                       <p className="mt-1.5 whitespace-pre-wrap">{e.body}</p>
+                      {repliesEnabled ? (
+                        <div className="mt-2">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 px-2 text-xs"
+                            onClick={() =>
+                              setExpanded((p) => ({ ...p, [e.id]: !p[e.id] }))
+                            }
+                          >
+                            {(() => {
+                              const count = repliesByEntry?.[e.id]?.length ?? 0;
+                              return count > 0
+                                ? `${count} ${count === 1 ? "reply" : "replies"}`
+                                : "Reply";
+                            })()}
+                          </Button>
+                          {expanded[e.id] ? (
+                            <CoachingReplyThread
+                              noteId={e.id}
+                              replies={repliesByEntry?.[e.id] ?? []}
+                              canReply={canReply}
+                            />
+                          ) : null}
+                        </div>
+                      ) : null}
                     </div>
                   ))}
                 </div>

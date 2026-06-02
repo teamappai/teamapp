@@ -20,6 +20,7 @@ export type NotificationKind =
   | "request_assigned"
   | "coaching_nudge"
   | "training_nudge"
+  | "coaching_reply"
   | "message_received"
   | "message_mention"
   | "message_channel_mention";

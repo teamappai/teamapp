@@ -89,6 +89,7 @@ export default async function AppLayout({
       requestId: (p.request_id as string | undefined) ?? null,
       requestTitle: (p.request_title as string | undefined) ?? null,
       threadId: (p.thread_id as string | undefined) ?? null,
+      coachingLogId: (p.coaching_log_id as string | undefined) ?? null,
       byName: (p.by_name as string | undefined) ?? null,
       claimed: p.claimed === true,
       read: n.read_at !== null,

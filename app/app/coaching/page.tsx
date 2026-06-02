@@ -11,6 +11,7 @@ import {
   type GoalProgress,
 } from "@/lib/coaching/queries";
 import { getCompanySettings } from "@/lib/team/config";
+import { getRepliesForEntries } from "@/lib/coaching/replies";
 import {
   COACHING_KPI_DEFINITIONS,
   type CoachingKpiInput,
@@ -43,7 +44,12 @@ function groupGoalsByAgent(
 export default async function CoachingPage({
   searchParams,
 }: {
-  searchParams: Promise<{ range?: string; from?: string; to?: string }>;
+  searchParams: Promise<{
+    range?: string;
+    from?: string;
+    to?: string;
+    note?: string;
+  }>;
 }) {
   const session = await getSessionProfile();
   if (!session || !canViewCoaching(session.profile.role)) {
@@ -82,6 +88,16 @@ export default async function CoachingPage({
     }),
     getCompanySettings(companyId),
   ]);
+
+  // Coaching note replies (Phase 13). admin_tc never sees reply threads
+  // (Decision 3). The subject agent and team_lead/super_admin may reply.
+  const repliesEnabled = role !== "admin_tc";
+  const canReply =
+    role === "team_lead" || role === "super_admin" || role === "agent";
+  const repliesByEntry = repliesEnabled
+    ? await getRepliesForEntries(dash.entries.map((e) => e.id))
+    : {};
+  const expandNoteId = sp.note;
 
   const kpiInput: CoachingKpiInput = {
     topOfFunnel: dash.funnel.topOfFunnel,
@@ -148,6 +164,10 @@ export default async function CoachingPage({
           canAddNote
           devMode={devMode}
           agents={agentOptions}
+          repliesByEntry={repliesByEntry}
+          repliesEnabled={repliesEnabled}
+          canReply={canReply}
+          expandNoteId={expandNoteId}
         />
       </div>
     );
@@ -186,6 +206,10 @@ export default async function CoachingPage({
         canAddNote={false}
         devMode={devMode}
         agents={[]}
+        repliesByEntry={repliesByEntry}
+        repliesEnabled={repliesEnabled}
+        canReply={canReply}
+        expandNoteId={expandNoteId}
       />
     </div>
   );

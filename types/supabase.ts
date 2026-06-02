@@ -299,6 +299,55 @@ export type Database = {
           },
         ]
       }
+      coaching_log_replies: {
+        Row: {
+          author_user_id: string
+          body: string
+          coaching_log_entry_id: string
+          created_at: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          author_user_id: string
+          body: string
+          coaching_log_entry_id: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          author_user_id?: string
+          body?: string
+          coaching_log_entry_id?: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coaching_log_replies_author_user_id_fkey"
+            columns: ["author_user_id"]
+            isOneToOne: false
+            referencedRelation: "active_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coaching_log_replies_author_user_id_fkey"
+            columns: ["author_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coaching_log_replies_coaching_log_entry_id_fkey"
+            columns: ["coaching_log_entry_id"]
+            isOneToOne: false
+            referencedRelation: "coaching_log_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       companies: {
         Row: {
           billing_cycle: string | null
@@ -2916,6 +2965,18 @@ export type Database = {
           },
         ]
       }
+      v_activity_feed_events: {
+        Row: {
+          actor_user_id: string | null
+          company_id: string | null
+          event_id: string | null
+          event_type: string | null
+          occurred_at: string | null
+          payload: Json | null
+          request_assignee_role: string | null
+        }
+        Relationships: []
+      }
       v_company_funnel: {
         Row: {
           appointments: number | null
@@ -2962,6 +3023,17 @@ export type Database = {
       }
     }
     Functions: {
+      activity_feed_for_user: {
+        Args: { p_limit?: number; p_offset?: number; p_user_id: string }
+        Returns: {
+          actor_user_id: string
+          company_id: string
+          event_id: string
+          event_type: string
+          occurred_at: string
+          payload: Json
+        }[]
+      }
       auth_user_company_id: { Args: never; Returns: string }
       auth_user_role: {
         Args: never

@@ -124,11 +124,26 @@ export async function updateSession(request: NextRequest) {
   // team-lead surfaces, gated to team_lead and super_admin (PA-2). agent /
   // admin_tc / marketing get a 403. The pages/actions independently re-check via
   // requireTeamLead before touching the service-role client.
+  //
+  // EXCEPTION: the drill-down /app/users/[agentId] (Phase 13) is also open to
+  // admin_tc for operational context (Decision 8) — but the /app/users
+  // management LIST stays team_lead/super_admin only.
+  const isUserDrillDown = /^\/app\/users\/[^/]+/.test(pathname);
+
   if (
-    (pathname.startsWith("/app/users") ||
+    ((pathname.startsWith("/app/users") && !isUserDrillDown) ||
       pathname.startsWith("/app/management") ||
       pathname.startsWith("/app/training/progress")) &&
     role !== "team_lead" &&
+    role !== "super_admin"
+  ) {
+    return forbid("/not-authorized");
+  }
+
+  if (
+    isUserDrillDown &&
+    role !== "team_lead" &&
+    role !== "admin_tc" &&
     role !== "super_admin"
   ) {
     return forbid("/not-authorized");
