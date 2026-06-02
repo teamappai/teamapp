@@ -6,7 +6,15 @@ import { toast } from "sonner";
 import Papa from "papaparse";
 import { Upload, X } from "lucide-react";
 
-import { inviteSingle, inviteBulk } from "@/app/app/users/actions";
+import Link from "next/link";
+import { CreditCard } from "lucide-react";
+
+import {
+  inviteSingle,
+  inviteBulk,
+  type SeatLimitInfo,
+} from "@/app/app/users/actions";
+import { formatCurrency } from "@/lib/utils/format";
 import {
   INVITABLE_ROLES,
   ROLE_DESCRIPTIONS,
@@ -53,6 +61,41 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 function FieldError({ children }: { children?: React.ReactNode }) {
   if (!children) return null;
   return <p className="text-destructive mt-1 text-xs">{children}</p>;
+}
+
+/**
+ * Seat-cap upgrade prompt (Decision 4 — C). Shown when an invite is hard-blocked
+ * at the seat limit: offers a positive path (upgrade or add seats) instead of a
+ * dead end. Both CTAs route to Billing where the actual change happens.
+ */
+function SeatLimitPrompt({ info }: { info: SeatLimitInfo }) {
+  return (
+    <div className="border-destructive/30 bg-destructive/5 space-y-3 rounded-lg border p-3">
+      <p className="text-sm font-medium">
+        You&rsquo;ve reached your seat limit ({info.used} of {info.total} seats
+        used).
+      </p>
+      <p className="text-muted-foreground text-xs">
+        Add seats from Billing to keep inviting your team.
+      </p>
+      <div className="flex flex-wrap gap-2">
+        {info.nextPlan && info.nextPlanName ? (
+          <Button asChild size="sm">
+            <Link href="/app/billing">Upgrade to {info.nextPlanName}</Link>
+          </Button>
+        ) : null}
+        <Button asChild size="sm" variant="outline">
+          <Link href="/app/billing">
+            <CreditCard className="size-4" />
+            Add seats
+            {info.perSeatMonthlyCents > 0
+              ? ` (${formatCurrency(info.perSeatMonthlyCents)}/seat/mo)`
+              : ""}
+          </Link>
+        </Button>
+      </div>
+    </div>
+  );
 }
 
 function RoleSelect({
@@ -103,6 +146,7 @@ function SingleInvite({
   const [moduleIds, setModuleIds] = React.useState<string[]>([]);
   const [touchedModules, setTouchedModules] = React.useState(false);
   const [errors, setErrors] = React.useState<Record<string, string>>({});
+  const [seatLimit, setSeatLimit] = React.useState<SeatLimitInfo | null>(null);
   const [pending, start] = React.useTransition();
 
   // Default the module selection to those visible to the chosen role until the
@@ -147,7 +191,8 @@ function SingleInvite({
         router.refresh();
         onDone();
       } else {
-        setErrors({ form: res.error });
+        setErrors({ form: res.seatLimit ? "" : res.error });
+        setSeatLimit(res.seatLimit ?? null);
       }
     });
   }
@@ -219,6 +264,7 @@ function SingleInvite({
         </div>
       )}
       <FieldError>{errors.form}</FieldError>
+      {seatLimit ? <SeatLimitPrompt info={seatLimit} /> : null}
       <div className="flex justify-end gap-2">
         <Button variant="ghost" onClick={onDone} disabled={pending}>
           Cancel
@@ -276,6 +322,7 @@ function BulkInvite({
   const [rows, setRows] = React.useState<ParsedRow[]>([]);
   const [welcome, setWelcome] = React.useState("");
   const [formError, setFormError] = React.useState<string>();
+  const [seatLimit, setSeatLimit] = React.useState<SeatLimitInfo | null>(null);
   const [pending, start] = React.useTransition();
   const fileRef = React.useRef<HTMLInputElement>(null);
 
@@ -368,7 +415,8 @@ function BulkInvite({
         router.refresh();
         onDone();
       } else {
-        setFormError(res.error);
+        setFormError(res.seatLimit ? undefined : res.error);
+        setSeatLimit(res.seatLimit ?? null);
       }
     });
   }
@@ -505,6 +553,7 @@ function BulkInvite({
       )}
 
       <FieldError>{formError}</FieldError>
+      {seatLimit ? <SeatLimitPrompt info={seatLimit} /> : null}
       <div className="flex justify-end gap-2">
         <Button variant="ghost" onClick={onDone} disabled={pending}>
           Cancel

@@ -79,13 +79,36 @@ export async function updateSession(request: NextRequest) {
   // query per request; revisit with a cached claim if it becomes hot.)
   const { data: profile } = await supabase
     .from("users")
-    .select("role")
+    .select("role, companies(status)")
     .eq("id", user.id)
     .single();
   const role = profile?.role;
+  const companyStatus = (profile?.companies as { status?: string } | null)
+    ?.status;
 
   if (isAuthEntry && role) {
     return redirectTo(roleHomePath(role));
+  }
+
+  // Billing is a team-lead surface (also visible to super_admin). agent /
+  // admin_tc / marketing get a 403. The page/actions re-check via requireTeamLead.
+  if (
+    pathname.startsWith("/app/billing") &&
+    role !== "team_lead" &&
+    role !== "super_admin"
+  ) {
+    return forbid("/not-authorized");
+  }
+
+  // Suspended companies (Phase 12 — Smart Retries exhausted / super-admin force
+  // suspend) lose app access EXCEPT the billing page, where they can recover.
+  if (
+    isAppRoute &&
+    role !== "super_admin" &&
+    companyStatus === "suspended" &&
+    !pathname.startsWith("/app/billing")
+  ) {
+    return redirectTo("/app/billing");
   }
 
   // The super-admin console is gated to super_admins. Non-super_admins (and a

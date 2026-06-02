@@ -21,6 +21,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { NotesPanel } from "@/components/admin/notes-panel";
+import { AdminBillingActions } from "@/components/admin/admin-billing-actions";
 import { formatCurrency, formatDate } from "@/lib/utils/format";
 import { ROLE_LABELS } from "@/lib/constants/roles";
 import { auditActionLabel } from "@/lib/audit/labels";
@@ -162,7 +163,7 @@ export function CompanyDetailTabs({
         )}
       </TabsContent>
 
-      {/* Billing (Phase 12 wires real Stripe data) */}
+      {/* Billing (Phase 12 — read-only Stripe mirror + super-admin overrides) */}
       <TabsContent value="billing">
         <Card>
           <CardContent className="space-y-6">
@@ -173,30 +174,70 @@ export function CompanyDetailTabs({
                 value={<StatusChip domain="company" status={company.status} />}
               />
               <Stat
-                label="Monthly"
-                value={formatCurrency(plan.monthly_price_cents)}
+                label="Billing cycle"
+                value={
+                  company.billing_cycle === "annual"
+                    ? "Annual"
+                    : company.billing_cycle === "monthly"
+                      ? "Monthly"
+                      : "—"
+                }
+              />
+              <Stat
+                label="Seats"
+                value={`${company.seatsUsed} / ${company.seats_total}`}
+              />
+              <Stat
+                label="Renews"
+                value={
+                  company.current_period_end
+                    ? formatDate(company.current_period_end, "short")
+                    : "—"
+                }
+              />
+              <Stat
+                label="Trial ends"
+                value={
+                  company.trial_ends_at
+                    ? formatDate(company.trial_ends_at, "short")
+                    : "—"
+                }
               />
             </div>
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Past invoices</p>
-              <div className="text-muted-foreground rounded-lg border border-dashed p-4 text-sm">
-                Connect Stripe in Phase 12 to view invoices.
-              </div>
+
+            {company.stripe_customer_id ? (
+              <Button asChild variant="outline">
+                <a
+                  href={`https://dashboard.stripe.com/customers/${company.stripe_customer_id}`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <CreditCard className="size-4" />
+                  View in Stripe
+                  <ExternalLink className="size-3.5" />
+                </a>
+              </Button>
+            ) : (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="inline-block">
+                    <Button variant="outline" disabled>
+                      <CreditCard className="size-4" />
+                      View in Stripe
+                      <ExternalLink className="size-3.5" />
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  No Stripe customer yet — created on first billing interaction.
+                </TooltipContent>
+              </Tooltip>
+            )}
+
+            <div className="space-y-2 border-t pt-4">
+              <p className="text-sm font-medium">Super-admin actions</p>
+              <AdminBillingActions companyId={company.id} />
             </div>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span className="inline-block">
-                  <Button variant="outline" disabled>
-                    <CreditCard className="size-4" />
-                    View in Stripe
-                    <ExternalLink className="size-3.5" />
-                  </Button>
-                </span>
-              </TooltipTrigger>
-              <TooltipContent>
-                Stripe integration not yet configured
-              </TooltipContent>
-            </Tooltip>
           </CardContent>
         </Card>
       </TabsContent>

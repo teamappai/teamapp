@@ -11,6 +11,13 @@ import {
   NotAuthorizedError,
 } from "@/lib/auth/require-super-admin";
 import { logAudit } from "@/lib/audit/log";
+import { getCompany } from "@/lib/billing/state";
+import { isStripeConfigured } from "@/lib/billing/env";
+import {
+  extendTrial as stripeExtendTrial,
+  applyCredit as stripeApplyCredit,
+} from "@/lib/billing/subscription";
+import { reconcileSubscription } from "@/lib/billing/sync";
 import {
   IMPERSONATION_ADMIN_ID_COOKIE,
   IMPERSONATION_SESSION_COOKIE,
@@ -97,6 +104,111 @@ export async function restoreCompany(
   return guarded(({ actorId }) =>
     setCompanyStatus(actorId, companyId, "active", "company_restored"),
   );
+}
+
+// ── super-admin billing overrides (Decision 11 — C) ───────────────────────────
+export async function extendTrialDays(
+  companyId: string,
+  days = 30,
+): Promise<AdminActionResult> {
+  return guarded(async ({ actorId }) => {
+    const company = await getCompany(companyId);
+    if (!company) return { ok: false, error: "Company not found." };
+
+    if (company.stripe_subscription_id && isStripeConfigured()) {
+      const sub = await stripeExtendTrial(company.stripe_subscription_id, days);
+      await reconcileSubscription(sub);
+    } else {
+      // No live subscription yet — extend the locally-tracked trial date.
+      const base = company.trial_ends_at
+        ? new Date(company.trial_ends_at)
+        : new Date();
+      base.setUTCDate(base.getUTCDate() + days);
+      const service = createServiceClient();
+      await service
+        .from("companies")
+        .update({ trial_ends_at: base.toISOString(), status: "trialing" })
+        .eq("id", companyId);
+    }
+
+    await logAudit({
+      actor_user_id: actorId,
+      action: "admin_trial_extended",
+      resource_type: "company",
+      resource_id: companyId,
+      metadata: { company_id: companyId, days },
+    });
+    revalidatePath(`/app/admin/companies/${companyId}`);
+    return { ok: true, message: `Trial extended by ${days} days.` };
+  });
+}
+
+export async function applyCreditToCompany(
+  companyId: string,
+  amountCents: number,
+  reason: string,
+): Promise<AdminActionResult> {
+  return guarded(async ({ actorId }) => {
+    if (!Number.isFinite(amountCents) || amountCents <= 0) {
+      return { ok: false, error: "Enter a positive dollar amount." };
+    }
+    if (!reason.trim()) return { ok: false, error: "A reason is required." };
+    if (!isStripeConfigured()) {
+      return { ok: false, error: "Stripe is not configured." };
+    }
+    const company = await getCompany(companyId);
+    if (!company?.stripe_customer_id) {
+      return { ok: false, error: "This company has no Stripe customer yet." };
+    }
+
+    await stripeApplyCredit({
+      customerId: company.stripe_customer_id,
+      amountCents: Math.round(amountCents),
+      reason: reason.trim(),
+    });
+
+    await logAudit({
+      actor_user_id: actorId,
+      action: "admin_credit_applied",
+      resource_type: "company",
+      resource_id: companyId,
+      metadata: {
+        company_id: companyId,
+        amount_cents: Math.round(amountCents),
+        reason: reason.trim(),
+      },
+    });
+    revalidatePath(`/app/admin/companies/${companyId}`);
+    return { ok: true, message: "Credit applied." };
+  });
+}
+
+export async function forceSuspendCompany(
+  companyId: string,
+): Promise<AdminActionResult> {
+  return guarded(async ({ actorId }) => {
+    const service = createServiceClient();
+    const { data: company, error } = await service
+      .from("companies")
+      .update({ status: "suspended" })
+      .eq("id", companyId)
+      .is("deleted_at", null)
+      .select("id, name")
+      .maybeSingle();
+    if (error) return { ok: false, error: "Could not suspend the company." };
+    if (!company) return { ok: false, error: "Company not found." };
+
+    await logAudit({
+      actor_user_id: actorId,
+      action: "admin_company_suspended",
+      resource_type: "company",
+      resource_id: companyId,
+      metadata: { company_id: companyId, company_name: company.name },
+    });
+    revalidatePath("/app/admin/companies");
+    revalidatePath(`/app/admin/companies/${companyId}`);
+    return { ok: true, message: `${company.name} suspended.` };
+  });
 }
 
 // ── resend invite ───────────────────────────────────────────────────────────

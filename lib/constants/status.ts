@@ -53,7 +53,9 @@ const COMPANY: Record<string, StatusVariant> = {
   trialing: "info",
   active: "success",
   past_due: "warning",
+  cancellation_scheduled: "warning",
   canceled: "danger",
+  suspended: "danger",
   paused: "neutral",
 };
 

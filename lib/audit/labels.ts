@@ -19,6 +19,21 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   deal_deleted: "Deleted deal",
   request_status_changed: "Changed request status",
   request_deleted: "Deleted request",
+  subscription_created: "Subscription created",
+  plan_upgraded: "Upgraded plan",
+  plan_downgraded: "Downgraded plan",
+  downgrade_scheduled: "Scheduled downgrade",
+  seats_changed: "Changed seat count",
+  subscription_paused: "Paused subscription",
+  subscription_resumed: "Resumed subscription",
+  payment_failed: "Payment failed",
+  payment_recovered: "Payment recovered",
+  cancellation_scheduled: "Scheduled cancellation",
+  cancellation_completed: "Completed cancellation",
+  seats_threshold_notified: "Sent seat-usage alert",
+  admin_trial_extended: "Extended trial",
+  admin_credit_applied: "Applied credit",
+  admin_company_suspended: "Force-suspended company",
 };
 
 export function auditActionLabel(action: string): string {
