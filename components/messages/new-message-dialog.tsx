@@ -24,12 +24,23 @@ import type { MemberLite } from "@/lib/messages/types";
 export function NewMessageDialog({
   members,
   trigger,
+  open: openProp,
+  onOpenChange,
 }: {
   members: MemberLite[];
-  trigger: React.ReactNode;
+  trigger?: React.ReactNode;
+  /** Controlled open (when driven by the "+ New" menu). */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
   const router = useRouter();
-  const [open, setOpen] = React.useState(false);
+  const [openState, setOpenState] = React.useState(false);
+  const controlled = openProp !== undefined;
+  const open = controlled ? openProp : openState;
+  const setOpen = (o: boolean) => {
+    if (controlled) onOpenChange?.(o);
+    else setOpenState(o);
+  };
   const [selected, setSelected] = React.useState<MemberLite[]>([]);
   const [query, setQuery] = React.useState("");
   const [body, setBody] = React.useState("");
@@ -80,7 +91,7 @@ export function NewMessageDialog({
         if (!o) reset();
       }}
     >
-      <DialogTrigger asChild>{trigger}</DialogTrigger>
+      {trigger ? <DialogTrigger asChild>{trigger}</DialogTrigger> : null}
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>New message</DialogTitle>

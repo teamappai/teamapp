@@ -1099,28 +1099,34 @@ export type Database = {
           company_id: string
           created_at: string
           created_by: string | null
+          description: string | null
           id: string
           name: string | null
           type: Database["public"]["Enums"]["message_thread_type"]
           updated_at: string
+          visibility: string | null
         }
         Insert: {
           company_id: string
           created_at?: string
           created_by?: string | null
+          description?: string | null
           id?: string
           name?: string | null
           type: Database["public"]["Enums"]["message_thread_type"]
           updated_at?: string
+          visibility?: string | null
         }
         Update: {
           company_id?: string
           created_at?: string
           created_by?: string | null
+          description?: string | null
           id?: string
           name?: string | null
           type?: Database["public"]["Enums"]["message_thread_type"]
           updated_at?: string
+          visibility?: string | null
         }
         Relationships: [
           {
@@ -1163,6 +1169,7 @@ export type Database = {
           deleted_at: string | null
           edited_at: string | null
           id: string
+          is_system: boolean
           reply_to_message_id: string | null
           sender_id: string | null
           thread_id: string
@@ -1176,6 +1183,7 @@ export type Database = {
           deleted_at?: string | null
           edited_at?: string | null
           id?: string
+          is_system?: boolean
           reply_to_message_id?: string | null
           sender_id?: string | null
           thread_id: string
@@ -1189,6 +1197,7 @@ export type Database = {
           deleted_at?: string | null
           edited_at?: string | null
           id?: string
+          is_system?: boolean
           reply_to_message_id?: string | null
           sender_id?: string | null
           thread_id?: string
@@ -2685,6 +2694,7 @@ export type Database = {
         Args: never
         Returns: Database["public"]["Enums"]["user_role"]
       }
+      can_manage_channels: { Args: never; Returns: boolean }
       can_manage_company: {
         Args: { target_company_id: string }
         Returns: boolean

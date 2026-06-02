@@ -1047,6 +1047,173 @@ async function main(): Promise<void> {
 
   console.log("• Messages: 3 threads (DM, group, marketing DM) w/ reactions");
 
+  // 11c) Channels (Phase 11.5). #general (replaces the migration backfill, which
+  // is wiped by the message_threads clear above), three more public channels, and
+  // one private #leadership. Membership follows the spec's role rules.
+  async function seedChannel(spec: {
+    name: string;
+    description: string;
+    visibility: "public" | "private";
+    createdBy: string;
+    memberIds: string[];
+  }): Promise<string> {
+    const { data: thread, error } = await admin
+      .from("message_threads")
+      .insert({
+        company_id: companyId,
+        type: "channel",
+        name: spec.name,
+        visibility: spec.visibility,
+        description: spec.description,
+        created_by: spec.createdBy,
+      })
+      .select("id")
+      .single();
+    die(`insert channel ${spec.name}`, error);
+    const { error: pErr } = await admin
+      .from("message_thread_participants")
+      .insert(
+        spec.memberIds.map((user_id) => ({
+          thread_id: thread!.id,
+          user_id,
+          last_read_at: now,
+        })),
+      );
+    die(`insert channel participants ${spec.name}`, pErr);
+    return thread!.id;
+  }
+
+  async function seedSystemMessage(
+    threadId: string,
+    body: string,
+    minutesAgo: number,
+  ): Promise<void> {
+    const { error } = await admin.from("messages").insert({
+      thread_id: threadId,
+      sender_id: null,
+      is_system: true,
+      body,
+      created_at: msgAgo(minutesAgo),
+    });
+    die("insert system message", error);
+  }
+
+  const allUserIds = [
+    teamLeadId,
+    agentId,
+    adminTcId,
+    marketingId,
+    ...stalledAgentIds,
+  ];
+  const agentRoleIds = [agentId, ...stalledAgentIds];
+
+  const generalId = await seedChannel({
+    name: "general",
+    description: "Company-wide channel for everyone",
+    visibility: "public",
+    createdBy: teamLeadId,
+    memberIds: allUserIds,
+  });
+  await seedMessage({
+    threadId: generalId,
+    senderId: teamLeadId,
+    body: "Welcome to #general 👋 — company-wide announcements land here.",
+    minutesAgo: 600,
+  });
+  await seedMessage({
+    threadId: generalId,
+    senderId: adminTcId,
+    body: "Reminder: submit your timesheets by Friday EOD.",
+    minutesAgo: 300,
+  });
+
+  const winsId = await seedChannel({
+    name: "wins",
+    description: "Celebrate closings and good news",
+    visibility: "public",
+    createdBy: teamLeadId,
+    memberIds: allUserIds,
+  });
+  const winsM1 = await seedMessage({
+    threadId: winsId,
+    senderId: agentId,
+    body: "Just closed 123 Main St 🎉 buyers are thrilled!",
+    minutesAgo: 240,
+  });
+  await seedMessage({
+    threadId: winsId,
+    senderId: teamLeadId,
+    body: "Huge week, team — <@channel> let's keep this momentum going! 🔥",
+    minutesAgo: 180,
+  });
+  await react(winsM1, teamLeadId, "🎉");
+  await react(winsM1, adminTcId, "🏆");
+
+  const dealsId = await seedChannel({
+    name: "deals",
+    description: "Active deal discussion",
+    visibility: "public",
+    createdBy: teamLeadId,
+    memberIds: [teamLeadId, adminTcId, ...agentRoleIds],
+  });
+  await seedMessage({
+    threadId: dealsId,
+    senderId: agentId,
+    body: "Anyone have a preferred lender for a first-time VA buyer?",
+    minutesAgo: 120,
+  });
+  await seedMessage({
+    threadId: dealsId,
+    senderId: adminTcId,
+    body: "I'll DM you a couple we've had smooth closings with.",
+    minutesAgo: 110,
+  });
+
+  const mktgReqId = await seedChannel({
+    name: "marketing-requests",
+    description: "Coordinate with marketing team",
+    visibility: "public",
+    createdBy: teamLeadId,
+    memberIds: [teamLeadId, adminTcId, marketingId],
+  });
+  await seedSystemMessage(mktgReqId, "Krisha joined the channel", 200);
+  await seedMessage({
+    threadId: mktgReqId,
+    senderId: teamLeadId,
+    body: `Can we get an open-house flyer for 456 Oak Ave? <@${marketingId}>`,
+    minutesAgo: 90,
+  });
+  await seedMessage({
+    threadId: mktgReqId,
+    senderId: marketingId,
+    body: "On it — draft by tomorrow morning ✅",
+    minutesAgo: 80,
+  });
+
+  const leadershipId = await seedChannel({
+    name: "leadership",
+    description: "Leadership-only discussion",
+    visibility: "private",
+    createdBy: teamLeadId,
+    memberIds: [teamLeadId, adminTcId],
+  });
+  await seedMessage({
+    threadId: leadershipId,
+    senderId: teamLeadId,
+    body: "Q3 planning sync Thursday — agenda to follow.",
+    minutesAgo: 150,
+  });
+  await seedMessage({
+    threadId: leadershipId,
+    senderId: adminTcId,
+    body: "Sounds good, I'll prep the pipeline numbers.",
+    minutesAgo: 140,
+  });
+
+  console.log(
+    "• Channels: #general, #wins, #deals, #marketing-requests, #leadership (private)",
+  );
+
   // 12) platform feature flags (Phase 5 editor). Seeded disabled; consuming code
   // lands in later phases. Upsert by key so re-seeding is idempotent and never
   // clobbers an operator's toggles beyond re-asserting the canonical description.

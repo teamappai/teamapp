@@ -10,6 +10,7 @@ import { ThreadList } from "@/components/messages/thread-list";
 import { Conversation } from "@/components/messages/conversation";
 import { ThreadInfo } from "@/components/messages/thread-info";
 import type {
+  ChannelSummary,
   MemberLite,
   ThreadDetail,
   ThreadSummary,
@@ -24,25 +25,33 @@ import type {
  */
 export function MessagesShell({
   threads,
+  channels,
   thread,
   members,
   currentUserId,
   companyId,
+  canManageChannels,
 }: {
   threads: ThreadSummary[];
+  channels: ChannelSummary[];
   thread: ThreadDetail | null;
   members: MemberLite[];
   currentUserId: string;
   companyId: string;
+  canManageChannels: boolean;
 }) {
   const router = useRouter();
   const supabase = React.useMemo(() => createClient(), []);
   const [infoOpen, setInfoOpen] = React.useState(false);
 
-  // Global watcher: any new message in a thread I'm in refreshes server data
-  // (left-rail counts + header badge share one source — F-122).
+  // Global watcher: any new message in a thread/channel I'm in refreshes server
+  // data (left-rail counts + header badge share one source — F-122). Includes
+  // channels so their unread badges stay live (and system notices arrive).
   const threadIdSet = React.useRef<Set<string>>(new Set());
-  threadIdSet.current = new Set(threads.map((t) => t.id));
+  threadIdSet.current = new Set([
+    ...threads.map((t) => t.id),
+    ...channels.map((c) => c.id),
+  ]);
   const timer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   React.useEffect(() => {
@@ -85,9 +94,11 @@ export function MessagesShell({
       >
         <ThreadList
           threads={threads}
+          channels={channels}
           selectedThreadId={thread?.id ?? null}
           currentUserId={currentUserId}
           members={members}
+          canManageChannels={canManageChannels}
         />
       </div>
 
@@ -99,6 +110,7 @@ export function MessagesShell({
             members={members}
             currentUserId={currentUserId}
             companyId={companyId}
+            canManageChannels={canManageChannels}
             infoOpen={infoOpen}
             onToggleInfo={() => setInfoOpen((v) => !v)}
           />
@@ -122,6 +134,7 @@ export function MessagesShell({
             thread={thread}
             members={members}
             currentUserId={currentUserId}
+            canManageChannels={canManageChannels}
             onClose={() => setInfoOpen(false)}
           />
         </div>

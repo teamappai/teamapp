@@ -21,7 +21,8 @@ export type NotificationKind =
   | "coaching_nudge"
   | "training_nudge"
   | "message_received"
-  | "message_mention";
+  | "message_mention"
+  | "message_channel_mention";
 
 export type NotifyInput = {
   /** Recipient. */

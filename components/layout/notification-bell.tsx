@@ -45,6 +45,8 @@ function describe(n: NotificationItem): string {
       return `${n.byName || "Someone"} sent you a message`;
     case "message_mention":
       return `${n.byName || "Someone"} mentioned you in a message`;
+    case "message_channel_mention":
+      return `${n.byName || "Someone"} mentioned @channel`;
     case "coaching_nudge":
       return `${n.byName || "Your coach"} sent you a nudge`;
     case "training_nudge":
@@ -56,6 +58,9 @@ function describe(n: NotificationItem): string {
 
 /** Where a notification navigates when clicked. */
 function hrefFor(n: NotificationItem): string | null {
+  if (n.kind === "message_channel_mention" && n.threadId) {
+    return `/app/messages/channels/${n.threadId}`;
+  }
   if (n.threadId) return `/app/messages/${n.threadId}`;
   if (n.requestId) return `/app/requests/${n.requestId}`;
   return null;

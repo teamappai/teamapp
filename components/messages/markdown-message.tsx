@@ -6,7 +6,11 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 import { cn } from "@/lib/utils/index";
-import { isMentionHref, mentionsToMarkdown } from "@/lib/messages/mentions";
+import {
+  isChannelMentionHref,
+  isMentionHref,
+  mentionsToMarkdown,
+} from "@/lib/messages/mentions";
 
 /**
  * Safe markdown renderer for message bodies (Decision 3 + markdown support).
@@ -46,6 +50,14 @@ export function MarkdownMessage({
         remarkPlugins={[remarkGfm]}
         components={{
           a({ href, children }) {
+            // @channel mention — distinct color/scope from a @user chip.
+            if (isChannelMentionHref(href)) {
+              return (
+                <span className="rounded bg-amber-100 px-1 font-medium text-amber-700 dark:bg-amber-950 dark:text-amber-300">
+                  {children}
+                </span>
+              );
+            }
             if (isMentionHref(href)) {
               return (
                 <Link

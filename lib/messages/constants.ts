@@ -41,6 +41,33 @@ export function isImageType(contentType: string | null | undefined): boolean {
   return !!contentType && /^image\/(png|jpe?g|gif|webp)$/i.test(contentType);
 }
 
+// ── channels (Phase 11.5) ───────────────────────────────────────────────────
+
+export const MAX_CHANNEL_NAME_CHARS = 80;
+export const MAX_CHANNEL_DESCRIPTION_CHARS = 500;
+/** The protected default channel — cannot be renamed, privatized, or archived. */
+export const GENERAL_CHANNEL_NAME = "general";
+
+/**
+ * Normalize a channel name to the canonical slug form (Decision: create modal).
+ * Lowercase, spaces → hyphens, only [a-z0-9-], collapse repeats, trim hyphens.
+ * Isomorphic so the create dialog's live preview and the server agree.
+ */
+export function slugifyChannelName(raw: string): string {
+  return raw
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[̀-ͯ]/g, "") // strip combining accents
+    .replace(/[^a-z0-9]+/g, "-") // non-alnum → hyphen
+    .replace(/-+/g, "-") // collapse repeats
+    .replace(/^-|-$/g, "") // trim leading/trailing hyphens
+    .slice(0, MAX_CHANNEL_NAME_CHARS);
+}
+
+export function isGeneralChannel(name: string | null | undefined): boolean {
+  return (name ?? "").trim().toLowerCase() === GENERAL_CHANNEL_NAME;
+}
+
 function firstName(name: string | null): string {
   return (name ?? "Someone").trim().split(/\s+/)[0] || "Someone";
 }

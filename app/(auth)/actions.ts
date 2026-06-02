@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { getInvitationByToken } from "@/lib/auth/invitations";
+import { addUserToGeneralChannel } from "@/lib/messages/channels";
 import { sanitizeNext } from "@/lib/auth/redirects";
 import { roleHomePath } from "@/lib/constants/roles";
 import {
@@ -180,6 +181,13 @@ export async function acceptInvitation(formData: {
     .from("user_invitations")
     .update({ accepted_at: new Date().toISOString() })
     .eq("id", invitation.id);
+
+  // New users auto-join their company's #general channel (Phase 11.5, Decision 3).
+  await addUserToGeneralChannel(
+    service,
+    invitation.company_id,
+    created.user.id,
+  );
 
   const supabase = await createClient();
   const { error: signInErr } = await supabase.auth.signInWithPassword({

@@ -36,6 +36,11 @@ export type AuditAction =
   | "message_participant_added"
   | "message_participant_removed"
   | "message_thread_left"
+  // Channels (Phase 11.5)
+  | "channel_created"
+  | "channel_archived"
+  | "channel_member_added"
+  | "channel_member_removed"
   // Billing (Phase 12)
   | "subscription_created"
   | "plan_upgraded"
