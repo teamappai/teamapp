@@ -4,7 +4,20 @@
  */
 
 /** Quick-bar reaction set (Decision 4). Order matters for the toolbar. */
-export const REACTION_EMOJIS = ["👍", "❤️", "🎉", "✅", "👀", "😂"] as const;
+export const REACTION_EMOJIS = [
+  "👍",
+  "❤️",
+  "🎉",
+  "✅",
+  "👀",
+  "😂",
+  "🏆",
+  "😭",
+  "🙏",
+  "🔥",
+  "💯",
+  "🚨",
+] as const;
 export type ReactionEmoji = (typeof REACTION_EMOJIS)[number];
 
 /** Attachment limits — same policy as Phase 9 requests (Decision 7). */
