@@ -68,3 +68,59 @@ export const removeParticipantSchema = z.object({
   threadId: z.string().uuid(),
   userId: z.string().uuid(),
 });
+
+// ── channels (Phase 11.5) ─────────────────────────────────────────────────────
+
+/** Server-side channel-name rule: 1..80 chars of [a-z0-9-], no leading/trailing -. */
+const channelNameSchema = z
+  .string()
+  .trim()
+  .min(1, "Give your channel a name.")
+  .max(80, "Channel names are 80 characters max.")
+  .regex(
+    /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
+    "Use lowercase letters, numbers, and hyphens only.",
+  );
+
+const channelDescriptionSchema = z
+  .string()
+  .trim()
+  .max(500, "Descriptions are 500 characters max.")
+  .optional()
+  .default("");
+
+export const createChannelSchema = z.object({
+  name: channelNameSchema,
+  description: channelDescriptionSchema,
+  visibility: z.enum(["public", "private"]),
+  memberIds: z.array(z.string().uuid()).max(100).optional().default([]),
+});
+
+export type CreateChannelInput = z.infer<typeof createChannelSchema>;
+
+export const updateChannelSchema = z.object({
+  channelId: z.string().uuid(),
+  name: channelNameSchema.optional(),
+  description: channelDescriptionSchema,
+  visibility: z.enum(["public", "private"]).optional(),
+});
+
+export type UpdateChannelInput = z.infer<typeof updateChannelSchema>;
+
+export const channelIdSchema = z.object({ channelId: z.string().uuid() });
+
+export const channelMembersSchema = z.object({
+  channelId: z.string().uuid(),
+  userIds: z.array(z.string().uuid()).min(1).max(100),
+});
+
+export const channelMemberSchema = z.object({
+  channelId: z.string().uuid(),
+  userId: z.string().uuid(),
+});
+
+/** Typed-confirmation guard for the destructive archive (Decision 10). */
+export const archiveChannelSchema = z.object({
+  channelId: z.string().uuid(),
+  confirm: z.literal("ARCHIVE"),
+});

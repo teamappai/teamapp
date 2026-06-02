@@ -7,6 +7,8 @@ import type { UserRole } from "@/lib/constants/roles";
 
 export type ThreadType = "direct" | "group" | "channel";
 
+export type ChannelVisibility = "public" | "private";
+
 /** A company member as shown in pickers, mention popovers, and participant lists. */
 export type MemberLite = {
   id: string;
@@ -54,6 +56,8 @@ export type MessageView = {
   contextType: string;
   contextPayload: Record<string, unknown> | null;
   reactions: ReactionGroup[];
+  /** System notice (join/leave/add/remove) — rendered as muted centered text. */
+  isSystem: boolean;
 };
 
 /** A participant of a thread. */
@@ -86,9 +90,31 @@ export type ThreadDetail = {
   name: string;
   customName: string | null;
   createdBy: string | null;
+  /** Channel-only: 'public' | 'private' (null for DMs/groups). */
+  visibility: ChannelVisibility | null;
+  /** Channel-only topic/description (null for DMs/groups or undescribed). */
+  description: string | null;
+  /** True for the protected #general channel (cannot rename/archive/privatize). */
+  isGeneral: boolean;
   participants: ParticipantView[];
   messages: MessageView[];
   files: Array<SignedAttachment & { messageId: string; uploadedAt: string }>;
+};
+
+/** Left-rail / browser summary for a channel. */
+export type ChannelSummary = {
+  id: string;
+  /** Bare channel name (no leading #); the UI prefixes it. */
+  name: string;
+  description: string | null;
+  visibility: ChannelVisibility;
+  isGeneral: boolean;
+  memberCount: number;
+  /** Whether the current viewer is a member. */
+  isMember: boolean;
+  unreadCount: number;
+  /** Last message time, falling back to the channel's updated_at. */
+  lastActivityAt: string;
 };
 
 /** Single source of truth for unread badges (F-122). */

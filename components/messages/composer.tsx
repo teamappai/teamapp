@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Loader2, Paperclip, SendHorizonal, X } from "lucide-react";
+import { AtSign, Loader2, Paperclip, SendHorizonal, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { cn } from "@/lib/utils/index";
@@ -38,8 +38,14 @@ export type ComposerSubmit = {
   previews: SignedAttachment[];
 };
 
-/** A tracked mention inserted via the popover: `@token` → user id. */
+/** A tracked mention inserted via the popover: `@token` → user id (or "channel"). */
 type Mention = { token: string; id: string };
+
+/** A row in the mention popover: a teammate, or the special @channel option. */
+type PopoverItem = { kind: "channel" } | { kind: "member"; member: MemberLite };
+
+const CHANNEL_TOKEN = "@channel";
+const CHANNEL_MENTION_ID = "channel";
 
 const MENTION_QUERY_RE = /(?:^|\s)@(\w*)$/;
 
@@ -47,6 +53,7 @@ export function Composer({
   threadId,
   companyId,
   members,
+  allowChannelMention,
   replyingTo,
   onCancelReply,
   onSubmit,
@@ -55,6 +62,8 @@ export function Composer({
   companyId: string;
   /** Company members for the mention popover. */
   members: MemberLite[];
+  /** Whether @channel is offered (channels only — Decision 9). */
+  allowChannelMention: boolean;
   replyingTo: { id: string; snippet: string; author: string | null } | null;
   onCancelReply: () => void;
   onSubmit: (payload: ComposerSubmit) => Promise<void>;
@@ -80,13 +89,19 @@ export function Composer({
     ta.style.height = `${Math.min(ta.scrollHeight, 132)}px`;
   }, [text]);
 
-  const matches = React.useMemo(() => {
+  const items = React.useMemo((): PopoverItem[] => {
     if (query == null) return [];
     const q = query.toLowerCase();
-    return members
+    const memberItems: PopoverItem[] = members
       .filter((m) => (m.name ?? "").toLowerCase().includes(q))
-      .slice(0, 6);
-  }, [query, members]);
+      .slice(0, 6)
+      .map((member) => ({ kind: "member", member }));
+    const channelItems: PopoverItem[] =
+      allowChannelMention && "channel".startsWith(q)
+        ? [{ kind: "channel" }]
+        : [];
+    return [...channelItems, ...memberItems];
+  }, [query, members, allowChannelMention]);
 
   const onChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
@@ -103,10 +118,8 @@ export function Composer({
     setMentions((prev) => prev.filter((mn) => value.includes(mn.token)));
   };
 
-  const insertMention = (member: MemberLite) => {
+  const insertToken = (token: string, id: string) => {
     const ta = taRef.current;
-    const name = member.name ?? "someone";
-    const token = `@${name}`;
     const caret = ta?.selectionStart ?? text.length;
     const before = text.slice(0, caret).replace(MENTION_QUERY_RE, (full) => {
       // Preserve a leading space/newline captured by the regex.
@@ -117,9 +130,9 @@ export function Composer({
     const next = before + after;
     setText(next);
     setMentions((prev) =>
-      prev.some((mn) => mn.id === member.id && mn.token === token)
+      prev.some((mn) => mn.id === id && mn.token === token)
         ? prev
-        : [...prev, { token, id: member.id }],
+        : [...prev, { token, id }],
     );
     setQuery(null);
     requestAnimationFrame(() => {
@@ -127,6 +140,14 @@ export function Composer({
       const pos = before.length;
       ta?.setSelectionRange(pos, pos);
     });
+  };
+
+  const insertItem = (item: PopoverItem) => {
+    if (item.kind === "channel") {
+      insertToken(CHANNEL_TOKEN, CHANNEL_MENTION_ID);
+    } else {
+      insertToken(`@${item.member.name ?? "someone"}`, item.member.id);
+    }
   };
 
   /** Replace tracked `@token` substrings with `<@id>` markers for storage. */
@@ -211,20 +232,20 @@ export function Composer({
   };
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (query != null && matches.length > 0) {
+    if (query != null && items.length > 0) {
       if (e.key === "ArrowDown") {
         e.preventDefault();
-        setActiveIdx((i) => (i + 1) % matches.length);
+        setActiveIdx((i) => (i + 1) % items.length);
         return;
       }
       if (e.key === "ArrowUp") {
         e.preventDefault();
-        setActiveIdx((i) => (i - 1 + matches.length) % matches.length);
+        setActiveIdx((i) => (i - 1 + items.length) % items.length);
         return;
       }
       if (e.key === "Enter" || e.key === "Tab") {
         e.preventDefault();
-        insertMention(matches[activeIdx]!);
+        insertItem(items[activeIdx]!);
         return;
       }
       if (e.key === "Escape") {
@@ -343,33 +364,60 @@ export function Composer({
 
         <div className="relative flex-1">
           {/* Mention popover */}
-          {query != null && matches.length > 0 ? (
+          {query != null && items.length > 0 ? (
             <div className="bg-popover absolute bottom-full left-0 z-20 mb-1 w-64 overflow-hidden rounded-md border shadow-md">
-              {matches.map((m, i) => (
-                <button
-                  key={m.id}
-                  type="button"
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    insertMention(m);
-                  }}
-                  className={cn(
-                    "flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-sm",
-                    i === activeIdx ? "bg-accent" : "hover:bg-accent",
-                  )}
-                >
-                  <UserAvatar
-                    name={m.name}
-                    src={m.avatarUrl}
-                    seed={m.id}
-                    size="sm"
-                  />
-                  <span className="min-w-0 flex-1 truncate">{m.name}</span>
-                  <span className="text-muted-foreground text-xs">
-                    {ROLE_LABELS[m.role]}
-                  </span>
-                </button>
-              ))}
+              {items.map((item, i) =>
+                item.kind === "channel" ? (
+                  <button
+                    key="channel"
+                    type="button"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      insertItem(item);
+                    }}
+                    className={cn(
+                      "flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-sm",
+                      i === activeIdx ? "bg-accent" : "hover:bg-accent",
+                    )}
+                  >
+                    <span className="flex size-6 shrink-0 items-center justify-center rounded bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300">
+                      <AtSign className="size-3.5" />
+                    </span>
+                    <span className="min-w-0 flex-1 truncate font-medium">
+                      @channel
+                    </span>
+                    <span className="text-muted-foreground text-xs">
+                      Notify everyone
+                    </span>
+                  </button>
+                ) : (
+                  <button
+                    key={item.member.id}
+                    type="button"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      insertItem(item);
+                    }}
+                    className={cn(
+                      "flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-sm",
+                      i === activeIdx ? "bg-accent" : "hover:bg-accent",
+                    )}
+                  >
+                    <UserAvatar
+                      name={item.member.name}
+                      src={item.member.avatarUrl}
+                      seed={item.member.id}
+                      size="sm"
+                    />
+                    <span className="min-w-0 flex-1 truncate">
+                      {item.member.name}
+                    </span>
+                    <span className="text-muted-foreground text-xs">
+                      {ROLE_LABELS[item.member.role]}
+                    </span>
+                  </button>
+                ),
+              )}
             </div>
           ) : null}
 

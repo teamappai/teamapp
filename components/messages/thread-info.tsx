@@ -6,6 +6,8 @@ import {
   Check,
   Download,
   FileText,
+  Hash,
+  Lock,
   LogOut,
   Pencil,
   Pin,
@@ -20,7 +22,10 @@ import { formatBytes, formatDate } from "@/lib/utils/format";
 import { ROLE_LABELS } from "@/lib/constants/roles";
 import { isImageType } from "@/lib/messages/constants";
 import {
+  addChannelMembers,
   addParticipants,
+  createThreadAndSend,
+  removeChannelMember,
   removeParticipant,
   renameThread,
 } from "@/app/app/messages/actions";
@@ -52,17 +57,24 @@ export function ThreadInfo({
   thread,
   members,
   currentUserId,
+  canManageChannels,
   onClose,
 }: {
   thread: ThreadDetail;
   members: MemberLite[];
   currentUserId: string;
+  canManageChannels: boolean;
   onClose: () => void;
 }) {
   const router = useRouter();
   const isGroup = thread.type === "group";
+  const isChannel = thread.type === "channel";
   const isOwner = thread.createdBy === currentUserId;
   const participantIds = new Set(thread.participants.map((p) => p.id));
+
+  // Who may add/remove members: a group's creator/members, or a channel admin.
+  const canAddMembers = isChannel ? canManageChannels : isGroup;
+  const canRemoveOthers = isChannel ? canManageChannels : isOwner;
 
   const [editingName, setEditingName] = React.useState(false);
   const [name, setName] = React.useState(thread.customName ?? "");
@@ -80,10 +92,9 @@ export function ThreadInfo({
   };
 
   const add = async (m: MemberLite) => {
-    const res = await addParticipants({
-      threadId: thread.id,
-      userIds: [m.id],
-    });
+    const res = isChannel
+      ? await addChannelMembers({ channelId: thread.id, userIds: [m.id] })
+      : await addParticipants({ threadId: thread.id, userIds: [m.id] });
     if (!res.ok) toast.error(res.error);
     else {
       toast.success(`Added ${m.name ?? "member"}.`);
@@ -92,13 +103,32 @@ export function ThreadInfo({
   };
 
   const remove = async (userId: string, isSelf: boolean) => {
-    if (isSelf && !confirm("Leave this group?")) return;
-    const res = await removeParticipant({ threadId: thread.id, userId });
+    if (isSelf && !confirm(`Leave this ${isChannel ? "channel" : "group"}?`)) {
+      return;
+    }
+    const res = isChannel
+      ? await removeChannelMember({ channelId: thread.id, userId })
+      : await removeParticipant({ threadId: thread.id, userId });
     if (!res.ok) {
       toast.error(res.error);
       return;
     }
     if (isSelf) router.push("/app/messages");
+    router.refresh();
+  };
+
+  // Click a channel member → open (or start) a DM with them.
+  const messageMember = async (userId: string) => {
+    const res = await createThreadAndSend({
+      participantIds: [userId],
+      name: "",
+      body: "",
+    });
+    if (!res.ok) {
+      toast.error(res.error);
+      return;
+    }
+    router.push(`/app/messages/${res.threadId}`);
     router.refresh();
   };
 
@@ -126,6 +156,32 @@ export function ThreadInfo({
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto">
+        {/* Channel identity + description */}
+        {isChannel ? (
+          <Section title="About">
+            <p className="flex items-center gap-1.5 text-sm font-medium">
+              {thread.visibility === "private" ? (
+                <Lock className="text-muted-foreground size-3.5" />
+              ) : (
+                <Hash className="text-muted-foreground size-3.5" />
+              )}
+              {thread.name}
+            </p>
+            {thread.description ? (
+              <p className="text-muted-foreground text-sm">
+                {thread.description}
+              </p>
+            ) : (
+              <p className="text-muted-foreground text-sm italic">
+                No description yet
+                {canManageChannels
+                  ? " — use the channel menu to add one."
+                  : "."}
+              </p>
+            )}
+          </Section>
+        ) : null}
+
         {/* Group name */}
         {isGroup ? (
           <Section
@@ -177,11 +233,11 @@ export function ThreadInfo({
           </Section>
         ) : null}
 
-        {/* Participants */}
+        {/* Participants / members */}
         <Section
-          title={`Participants (${thread.participants.length})`}
+          title={`${isChannel ? "Members" : "Participants"} (${thread.participants.length})`}
           action={
-            isGroup ? (
+            canAddMembers ? (
               <button
                 type="button"
                 onClick={() => setAdding((v) => !v)}
@@ -192,7 +248,7 @@ export function ThreadInfo({
             ) : null
           }
         >
-          {adding ? (
+          {adding && canAddMembers ? (
             <div className="mb-2 space-y-1.5">
               <input
                 value={query}
@@ -230,7 +286,11 @@ export function ThreadInfo({
           <ul className="space-y-1">
             {thread.participants.map((p) => {
               const isSelf = p.id === currentUserId;
-              const canRemove = isGroup && (isSelf || isOwner);
+              // #general membership is permanent.
+              const removable =
+                !(isChannel && thread.isGeneral) &&
+                (isSelf || canRemoveOthers) &&
+                (isChannel || isGroup);
               return (
                 <li key={p.id} className="flex items-center gap-2">
                   <UserAvatar
@@ -239,18 +299,33 @@ export function ThreadInfo({
                     seed={p.id}
                     size="sm"
                   />
-                  <span className="min-w-0 flex-1 truncate text-sm">
-                    {p.name}
-                    {isSelf ? " (you)" : ""}
-                  </span>
+                  {isChannel && !isSelf ? (
+                    <button
+                      type="button"
+                      onClick={() => void messageMember(p.id)}
+                      title={`Message ${p.name ?? "member"}`}
+                      className="min-w-0 flex-1 truncate text-left text-sm hover:underline"
+                    >
+                      {p.name}
+                    </button>
+                  ) : (
+                    <span className="min-w-0 flex-1 truncate text-sm">
+                      {p.name}
+                      {isSelf ? " (you)" : ""}
+                    </span>
+                  )}
                   <span className="bg-muted text-muted-foreground rounded px-1.5 py-0.5 text-[10px] font-medium">
                     {ROLE_LABELS[p.role]}
                   </span>
-                  {canRemove ? (
+                  {removable ? (
                     <button
                       type="button"
                       onClick={() => void remove(p.id, isSelf)}
-                      aria-label={isSelf ? "Leave group" : `Remove ${p.name}`}
+                      aria-label={
+                        isSelf
+                          ? `Leave ${isChannel ? "channel" : "group"}`
+                          : `Remove ${p.name}`
+                      }
                       className="text-muted-foreground hover:text-destructive"
                     >
                       {isSelf ? (

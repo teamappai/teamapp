@@ -11,10 +11,12 @@ export default async function MessagesPage() {
     <div className="-mx-4 -my-6 h-[calc(100vh-3.5rem)] sm:-mx-6">
       <MessagesShell
         threads={data.threads}
+        channels={data.channels}
         thread={data.thread}
         members={data.members}
         currentUserId={data.currentUserId}
         companyId={data.companyId}
+        canManageChannels={data.canManageChannels}
       />
     </div>
   );

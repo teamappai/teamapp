@@ -2,13 +2,14 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Info, Users } from "lucide-react";
+import { Hash, Info, Lock, Users } from "lucide-react";
 import { toast } from "sonner";
 
 import { cn } from "@/lib/utils/index";
 import { createClient } from "@/lib/supabase/client";
 import { TooltipIconButton } from "@/components/shared/tooltip-icon-button";
 import { ThreadAvatar } from "@/components/messages/thread-avatar";
+import { ChannelHeaderMenu } from "@/components/messages/channel-header-menu";
 import { Composer, type ComposerSubmit } from "@/components/messages/composer";
 import {
   MessageItem,
@@ -67,6 +68,7 @@ export function Conversation({
   members,
   currentUserId,
   companyId,
+  canManageChannels,
   infoOpen,
   onToggleInfo,
 }: {
@@ -74,9 +76,11 @@ export function Conversation({
   members: MemberLite[];
   currentUserId: string;
   companyId: string;
+  canManageChannels: boolean;
   infoOpen: boolean;
   onToggleInfo: () => void;
 }) {
+  const isChannel = thread.type === "channel";
   const router = useRouter();
   const supabase = React.useMemo(() => createClient(), []);
 
@@ -298,6 +302,7 @@ export function Conversation({
       contextType: "normal",
       contextPayload: null,
       reactions: [],
+      isSystem: false,
     };
     setPending((prev) => {
       const next = new Map(prev);
@@ -415,14 +420,44 @@ export function Conversation({
     <div className="flex h-full min-w-0 flex-1 flex-col">
       {/* Header */}
       <div className="flex h-14 shrink-0 items-center gap-3 border-b px-4">
-        <ThreadAvatar type={thread.type} others={others} size="sm" />
+        {isChannel ? (
+          <span className="bg-muted text-muted-foreground flex size-8 shrink-0 items-center justify-center rounded-md">
+            {thread.visibility === "private" ? (
+              <Lock className="size-4" />
+            ) : (
+              <Hash className="size-4" />
+            )}
+          </span>
+        ) : (
+          <ThreadAvatar type={thread.type} others={others} size="sm" />
+        )}
         <div className="min-w-0 flex-1">
-          <h2 className="truncate text-sm font-semibold">{thread.name}</h2>
-          <p className="text-muted-foreground flex items-center gap-1 truncate text-xs">
-            <Users className="size-3" />
-            {thread.participants.length} member
-            {thread.participants.length === 1 ? "" : "s"}
-          </p>
+          <h2 className="flex items-center gap-1.5 truncate text-sm font-semibold">
+            {isChannel ? (
+              <>
+                <span className="text-muted-foreground">#</span>
+                {thread.name}
+              </>
+            ) : (
+              thread.name
+            )}
+            {isChannel && thread.visibility === "private" ? (
+              <span className="text-muted-foreground inline-flex items-center gap-0.5 rounded border px-1.5 py-0.5 text-[10px] font-medium">
+                <Lock className="size-2.5" /> Private
+              </span>
+            ) : null}
+          </h2>
+          {isChannel && thread.description ? (
+            <p className="text-muted-foreground truncate text-xs">
+              {thread.description}
+            </p>
+          ) : (
+            <p className="text-muted-foreground flex items-center gap-1 truncate text-xs">
+              <Users className="size-3" />
+              {thread.participants.length} member
+              {thread.participants.length === 1 ? "" : "s"}
+            </p>
+          )}
         </div>
         <TooltipIconButton
           aria-label="Thread info"
@@ -432,6 +467,15 @@ export function Conversation({
         >
           <Info className="size-5" />
         </TooltipIconButton>
+        {isChannel ? (
+          <ChannelHeaderMenu
+            channel={thread}
+            canManageChannels={canManageChannels}
+            onOpenInfo={() => {
+              if (!infoOpen) onToggleInfo();
+            }}
+          />
+        ) : null}
       </div>
 
       {/* Messages */}
@@ -471,31 +515,37 @@ export function Conversation({
                       <span className="bg-border h-px flex-1" />
                     </div>
                   ) : null}
-                  <MessageItem
-                    message={message}
-                    nameOf={nameOf}
-                    currentUserId={currentUserId}
-                    replyContext={replyContextFor(message)}
-                    canEdit={canEdit}
-                    isReply={isReply}
-                    pending={m._pending && !m._failed}
-                    failed={m._failed}
-                    onReply={setReplyingTo}
-                    onReact={onReact}
-                    onEdit={onEdit}
-                    onDelete={onDelete}
-                    onRetry={() => {
-                      if (m._clientId) {
-                        const entry = pending.get(m._clientId);
-                        if (entry)
-                          void doSend(
-                            entry.clientId,
-                            entry.payload,
-                            entry.replyTo,
-                          );
-                      }
-                    }}
-                  />
+                  {message.isSystem ? (
+                    <p className="text-muted-foreground py-1 text-center text-xs italic">
+                      {message.body}
+                    </p>
+                  ) : (
+                    <MessageItem
+                      message={message}
+                      nameOf={nameOf}
+                      currentUserId={currentUserId}
+                      replyContext={replyContextFor(message)}
+                      canEdit={canEdit}
+                      isReply={isReply}
+                      pending={m._pending && !m._failed}
+                      failed={m._failed}
+                      onReply={setReplyingTo}
+                      onReact={onReact}
+                      onEdit={onEdit}
+                      onDelete={onDelete}
+                      onRetry={() => {
+                        if (m._clientId) {
+                          const entry = pending.get(m._clientId);
+                          if (entry)
+                            void doSend(
+                              entry.clientId,
+                              entry.payload,
+                              entry.replyTo,
+                            );
+                        }
+                      }}
+                    />
+                  )}
                 </React.Fragment>
               );
             })}
@@ -509,6 +559,7 @@ export function Conversation({
         threadId={thread.id}
         companyId={companyId}
         members={members.filter((m) => m.id !== currentUserId)}
+        allowChannelMention={isChannel}
         replyingTo={
           replyingTo
             ? {

@@ -2,7 +2,7 @@ import "server-only";
 import type { DbClient } from "@/lib/storage";
 import { BUCKETS } from "@/lib/storage";
 import type { UserRole } from "@/lib/constants/roles";
-import { autoGroupName } from "@/lib/messages/constants";
+import { autoGroupName, isGeneralChannel } from "@/lib/messages/constants";
 import type {
   MemberLite,
   MessageAttachment,
@@ -75,24 +75,24 @@ export async function getUnreadSummary(
   client: DbClient,
   userId: string,
 ): Promise<UnreadSummary> {
-  // My memberships, with the thread type so channel threads are excluded from
-  // the count (Phase 11 does not surface channels anywhere).
+  // Every thread I participate in — DMs, groups, AND channels (Phase 11.5 surfaces
+  // channels in the sidebar, so their unread counts feed the same badge math).
   const { data: parts } = await client
     .from("message_thread_participants")
-    .select("thread_id, last_read_at, message_threads!inner(type)")
+    .select("thread_id, last_read_at")
     .eq("user_id", userId);
 
-  const rows = (parts ?? []).filter(
-    (p) => (p.message_threads as { type: ThreadType }).type !== "channel",
-  );
+  const rows = parts ?? [];
 
   const counts = await Promise.all(
     rows.map(async (p) => {
+      // "Not authored by me" must also count system notices (sender_id IS NULL),
+      // which a plain `neq` would drop — Decision 6: system messages count unread.
       let q = client
         .from("messages")
         .select("id", { count: "exact", head: true })
         .eq("thread_id", p.thread_id)
-        .neq("sender_id", userId)
+        .or(`sender_id.is.null,sender_id.neq.${userId}`)
         .is("deleted_at", null);
       if (p.last_read_at) q = q.gt("created_at", p.last_read_at);
       const { count } = await q;
@@ -242,7 +242,7 @@ export async function getThreadDetail(
 ): Promise<ThreadDetail | null> {
   const { data: thread } = await client
     .from("message_threads")
-    .select("id, type, name, created_by")
+    .select("id, type, name, created_by, visibility, description")
     .eq("id", threadId)
     .maybeSingle();
   if (!thread) return null; // not a participant (RLS) or missing
@@ -270,7 +270,7 @@ export async function getThreadDetail(
   const { data: msgRows } = await client
     .from("messages")
     .select(
-      "id, thread_id, sender_id, body, attachments, reply_to_message_id, edited_at, deleted_at, created_at, context_type, context_payload",
+      "id, thread_id, sender_id, body, attachments, reply_to_message_id, edited_at, deleted_at, created_at, context_type, context_payload, is_system",
     )
     .eq("thread_id", threadId)
     .order("created_at", { ascending: true });
@@ -349,6 +349,7 @@ export async function getThreadDetail(
       contextPayload:
         (r.context_payload as Record<string, unknown> | null) ?? null,
       reactions: reactionsByMessage.get(r.id) ?? [],
+      isSystem: r.is_system,
     };
   });
 
@@ -361,12 +362,22 @@ export async function getThreadDetail(
     })),
   );
 
+  const type = thread.type as ThreadType;
   return {
     id: thread.id,
-    type: thread.type as ThreadType,
-    name: resolveThreadName(thread.type as ThreadType, thread.name, others),
+    type,
+    name:
+      type === "channel"
+        ? (thread.name ?? "channel")
+        : resolveThreadName(type, thread.name, others),
     customName: thread.name,
     createdBy: thread.created_by,
+    visibility:
+      type === "channel"
+        ? ((thread.visibility as "public" | "private" | null) ?? "public")
+        : null,
+    description: type === "channel" ? thread.description : null,
+    isGeneral: type === "channel" && isGeneralChannel(thread.name),
     participants,
     messages,
     files,
