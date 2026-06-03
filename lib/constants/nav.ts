@@ -17,6 +17,7 @@ export type NavIconKey =
   | "users"
   | "coaching"
   | "deals"
+  | "deal"
   | "requests"
   | "training"
   | "messages"
@@ -25,7 +26,9 @@ export type NavIconKey =
   | "featureFlags"
   | "auditLog"
   | "billing"
-  | "activityLog";
+  | "activityLog"
+  | "invite"
+  | "plus";
 
 export type NavItem = {
   href: string;

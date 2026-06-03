@@ -27,6 +27,7 @@ export type AuditAction =
   | "coaching_nudge_sent"
   | "coaching_note_added"
   | "coaching_note_deleted"
+  | "coaching_reply_added"
   | "goal_set"
   | "goal_deleted"
   | "activity_back_dated"

@@ -808,38 +808,73 @@ async function main(): Promise<void> {
   // is flagged is_test=true to exercise the default test-data filter (F-109/111).
   const hoursAgo = (h: number) =>
     new Date(Date.now() - h * 60 * 60 * 1000).toISOString();
-  const { error: coachErr } = await admin.from("coaching_log_entries").insert([
-    {
-      agent_user_id: agentId,
-      coach_user_id: teamLeadId,
-      body: "Great momentum on prospecting. Focus next week on converting buyer consults to signed agreements.",
-      occurred_at: hoursAgo(2),
-      is_test: false,
-    },
-    {
-      agent_user_id: agentId,
-      coach_user_id: teamLeadId,
-      body: "Reviewed pipeline — the Oak Ave deal cancelled on financing. Let's tighten lender pre-checks before writing offers.",
-      occurred_at: hoursAgo(26), // yesterday
-      is_test: false,
-    },
-    {
-      agent_user_id: agentId,
-      coach_user_id: teamLeadId,
-      body: "Role-played a listing presentation. Strong on pricing story; work the objection handling.",
-      occurred_at: hoursAgo(24 * 5), // ~5 days ago
-      is_test: false,
-    },
-    {
-      agent_user_id: agentId,
-      coach_user_id: teamLeadId,
-      body: "[seeded demo] This is sample/test coaching data.",
-      occurred_at: hoursAgo(3),
-      is_test: true,
-    },
-  ]);
+  const { data: coachEntries, error: coachErr } = await admin
+    .from("coaching_log_entries")
+    .insert([
+      {
+        agent_user_id: agentId,
+        coach_user_id: teamLeadId,
+        body: "Great momentum on prospecting. Focus next week on converting buyer consults to signed agreements.",
+        occurred_at: hoursAgo(2),
+        is_test: false,
+      },
+      {
+        agent_user_id: agentId,
+        coach_user_id: teamLeadId,
+        body: "Reviewed pipeline — the Oak Ave deal cancelled on financing. Let's tighten lender pre-checks before writing offers.",
+        occurred_at: hoursAgo(26), // yesterday
+        is_test: false,
+      },
+      {
+        agent_user_id: agentId,
+        coach_user_id: teamLeadId,
+        body: "Role-played a listing presentation. Strong on pricing story; work the objection handling.",
+        occurred_at: hoursAgo(24 * 5), // ~5 days ago
+        is_test: false,
+      },
+      {
+        agent_user_id: agentId,
+        coach_user_id: teamLeadId,
+        body: "[seeded demo] This is sample/test coaching data.",
+        occurred_at: hoursAgo(3),
+        is_test: true,
+      },
+    ])
+    .select("id, occurred_at");
   die("insert coaching_log_entry", coachErr);
   console.log("• Coaching log: 4 entries (1 flagged test)");
+
+  // 11a) Coaching note replies (Phase 13) — turn two notes into a conversation
+  // so the reply UX + bell notification flow are demonstrable without manual
+  // data entry. Mix: 2 from the team_lead, 1 from the agent.
+  const sortedEntries = (coachEntries ?? [])
+    .slice()
+    .sort((a, b) => (a.occurred_at < b.occurred_at ? 1 : -1));
+  const newestEntry = sortedEntries[0];
+  const yesterdayEntry = sortedEntries[1];
+  if (newestEntry && yesterdayEntry) {
+    const { error: replyErr } = await admin
+      .from("coaching_log_replies")
+      .insert([
+        {
+          coaching_log_entry_id: newestEntry.id,
+          author_user_id: teamLeadId,
+          body: "Nice work this week — let's set a target of 3 signed buyer agreements.",
+        },
+        {
+          coaching_log_entry_id: newestEntry.id,
+          author_user_id: agentId,
+          body: "On it. I have two consults booked Thursday I think will convert.",
+        },
+        {
+          coaching_log_entry_id: yesterdayEntry.id,
+          author_user_id: teamLeadId,
+          body: "Good call on the lender pre-check. Loop me in before the next offer.",
+        },
+      ]);
+    die("insert coaching_log_replies", replyErr);
+    console.log("• Coaching replies: 3 (2 team_lead, 1 agent)");
+  }
 
   // 11b) Messages (Phase 11). A DM, a group, and a marketing DM — with a reply,
   // reactions, a mention, and an attachment — plus realistic last_read_at so
