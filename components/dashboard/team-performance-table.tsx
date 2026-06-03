@@ -109,7 +109,46 @@ export function TeamPerformanceTable({ rows }: { rows: TeamPerfRow[] }) {
 
   return (
     <>
-      <div className="overflow-x-auto rounded-md border">
+      {/* Mobile card list (≤768px) */}
+      <div className="space-y-2 md:hidden">
+        {sorted.map((r) => (
+          <button
+            key={r.userId}
+            type="button"
+            onClick={() => router.push(`/app/users/${r.userId}`)}
+            className="hover:bg-muted/50 focus-visible:ring-ring/50 block w-full rounded-md border p-3 text-left focus-visible:ring-2 focus-visible:outline-none"
+          >
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex min-w-0 items-center gap-2">
+                <UserAvatar
+                  name={r.name}
+                  src={r.avatarUrl}
+                  seed={r.userId}
+                  size="sm"
+                />
+                <span className="truncate font-medium">{r.name ?? "—"}</span>
+              </div>
+              <span className="shrink-0 text-sm font-semibold tabular-nums">
+                {formatCurrency(r.gciYtdCents, { compact: true })}
+              </span>
+            </div>
+            <div className="text-muted-foreground mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs tabular-nums">
+              <span>{r.closedDealsYtd} closed YTD</span>
+              <span>
+                {formatCurrency(r.closedVolumeYtdCents, { compact: true })} vol
+              </span>
+              <span>
+                {r.lastActivity
+                  ? formatDate(r.lastActivity, "relative")
+                  : "No activity"}
+              </span>
+              {r.goalPct !== null ? <span>{r.goalPct}% of goal</span> : null}
+            </div>
+          </button>
+        ))}
+      </div>
+
+      <div className="hidden overflow-x-auto rounded-md border md:block">
         <Table>
           <TableHeader>
             <TableRow>
@@ -208,7 +247,12 @@ export function TeamPerformanceTable({ rows }: { rows: TeamPerfRow[] }) {
                 <TableCell onClick={(e) => e.stopPropagation()}>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="size-7">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-7"
+                        aria-label={`Actions for ${r.name ?? "agent"}`}
+                      >
                         <MoreHorizontal className="size-4" />
                       </Button>
                     </DropdownMenuTrigger>

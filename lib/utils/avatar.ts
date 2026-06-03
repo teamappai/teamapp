@@ -22,10 +22,31 @@ function hashString(seed: string): number {
 }
 
 /**
+ * Curated avatar palette (Phase 14 a11y): every color clears WCAG AA 4.5:1
+ * against the white initials. The previous `hsl(h 62% 45%)` formula let bright
+ * hues (lime/yellow) through at ~2.4:1. These are Tailwind 700-weight tones.
+ */
+const AVATAR_COLORS = [
+  "#b91c1c", // red-700
+  "#c2410c", // orange-700
+  "#b45309", // amber-700
+  "#047857", // emerald-700
+  "#0f766e", // teal-700
+  "#155e75", // cyan-800
+  "#1d4ed8", // blue-700
+  "#4338ca", // indigo-700
+  "#6d28d9", // violet-700
+  "#7e22ce", // purple-700
+  "#be185d", // pink-700
+  "#be123c", // rose-700
+] as const;
+
+/**
  * A readable background color for an avatar fallback, derived from `seed`.
- * Uses a fixed saturation/lightness so white text always has enough contrast.
+ * Deterministic per seed and guaranteed to pass contrast with white text.
  */
 export function avatarColor(seed?: string | null): string {
-  const hue = hashString(seed && seed.length > 0 ? seed : "?") % 360;
-  return `hsl(${hue} 62% 45%)`;
+  const i =
+    hashString(seed && seed.length > 0 ? seed : "?") % AVATAR_COLORS.length;
+  return AVATAR_COLORS[i]!;
 }

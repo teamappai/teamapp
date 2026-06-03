@@ -7,14 +7,16 @@ import { Card, CardContent } from "@/components/ui/card";
  * with the conversion rate shown between each stage. Bars scale to the largest
  * stage value so the narrowing shape reads at a glance.
  */
+// Darkened to ≥700 so the white in-bar value text clears WCAG AA 4.5:1
+// (Phase 14 a11y); the hues still read as a distinct narrowing gradient.
 const BAR_COLORS = [
-  "bg-sky-500",
-  "bg-sky-600",
-  "bg-indigo-500",
-  "bg-indigo-600",
-  "bg-violet-600",
-  "bg-purple-600",
-  "bg-emerald-600",
+  "bg-sky-700",
+  "bg-sky-800",
+  "bg-indigo-700",
+  "bg-indigo-800",
+  "bg-violet-700",
+  "bg-purple-700",
+  "bg-emerald-700",
 ];
 
 export function FunnelChart({ input }: { input: FunnelInput }) {

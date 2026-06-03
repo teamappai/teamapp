@@ -3,6 +3,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import type { UserRole } from "@/lib/constants/roles";
 import { todayIso, addDaysIso } from "@/lib/coaching/dates";
 import { yearStartIso } from "@/lib/dashboards/range";
+import { expectedPipelineCents } from "@/lib/dashboards/pipeline-value";
 
 /**
  * Shared dashboard data access (Phase 13). Aggregations read through the
@@ -156,16 +157,7 @@ export function computeDealKpis(deals: DashDeal[]): DealKpis {
   );
 
   // Pipeline = expected commission across non-terminal deals (F-027 helper).
-  const pipelineValueCents = Math.round(
-    deals
-      .filter((d) => !d.isTerminalWon && !d.isTerminalLost)
-      .reduce((s, d) => {
-        const price = d.sales_price_cents ?? 0;
-        const comm = (d.commission_pct ?? 0) / 100;
-        const prob = d.probabilityPct / 100;
-        return s + price * comm * prob;
-      }, 0),
-  );
+  const pipelineValueCents = expectedPipelineCents(deals);
 
   // 12-month sparklines keyed by YYYY-MM, oldest → newest.
   const months: string[] = [];

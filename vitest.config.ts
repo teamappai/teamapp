@@ -9,4 +9,10 @@ export default defineConfig({
   resolve: {
     alias: { "@": resolve(__dirname, ".") },
   },
+  test: {
+    // Unit tests are co-located as *.test.ts. Playwright E2E specs live in
+    // tests/ as *.spec.ts — keep vitest from picking those up.
+    include: ["**/*.test.{ts,tsx}"],
+    exclude: ["node_modules/**", "tests/**", ".next/**"],
+  },
 });

@@ -9,7 +9,9 @@ import { getPipelineSummary } from "@/lib/coaching/pipeline";
 import { addDaysIso, resolveRange, todayIso } from "@/lib/coaching/dates";
 import {
   ACTIVITY_METRICS,
+  GROUP_METRIC_KEYS,
   totalActivity,
+  type ActivityGroupKey,
   type ActivityMetricKey,
 } from "@/lib/constants/activity-metrics";
 import { PageHeader } from "@/components/shared/page-header";
@@ -17,6 +19,7 @@ import {
   ActivityLogForm,
   type DayLog,
   type MetricValues,
+  type YesterdayReference,
 } from "@/components/coaching/activity-log-form";
 import type { WeeklyPoint } from "@/components/coaching/weekly-activity-chart";
 
@@ -58,7 +61,9 @@ export default async function ActivityLogPage() {
   const rows = recent ?? [];
   const byDate = new Map(rows.map((r) => [r.log_date, r]));
 
-  // Prefill map for the form (last 31 days).
+  // Saved logs by date — used only to re-open a day that was already logged
+  // (editing/correcting). New days no longer carry yesterday's numbers forward
+  // (Phase 14 daily-reset, USER OVERRIDE): each day starts at 0.
   const logsByDate: Record<string, DayLog> = {};
   for (const r of rows) {
     logsByDate[r.log_date] = {
@@ -66,6 +71,38 @@ export default async function ActivityLogPage() {
       isOffDay: r.is_off_day,
     };
   }
+
+  // Yesterday's totals — shown as a read-only REFERENCE card below the form
+  // (never pre-filled into the inputs).
+  const yesterdayIso = addDaysIso(today, -1);
+  const yRow = byDate.get(yesterdayIso);
+  const groupTotals = (row: Record<ActivityMetricKey, number>) =>
+    (Object.keys(GROUP_METRIC_KEYS) as ActivityGroupKey[]).reduce(
+      (acc, g) => {
+        acc[g] = GROUP_METRIC_KEYS[g].reduce((s, k) => s + (row[k] ?? 0), 0);
+        return acc;
+      },
+      {} as Record<ActivityGroupKey, number>,
+    );
+  const yesterday: YesterdayReference = yRow
+    ? {
+        date: yesterdayIso,
+        logged: true,
+        isOffDay: yRow.is_off_day,
+        total: yRow.is_off_day
+          ? 0
+          : totalActivity(yRow as Record<ActivityMetricKey, number>),
+        groups: yRow.is_off_day
+          ? { top_of_funnel: 0, appointments: 0, pipeline: 0 }
+          : groupTotals(yRow as Record<ActivityMetricKey, number>),
+      }
+    : {
+        date: yesterdayIso,
+        logged: false,
+        isOffDay: false,
+        total: 0,
+        groups: { top_of_funnel: 0, appointments: 0, pipeline: 0 },
+      };
 
   // Weekly chart: last 7 days including today, oldest → newest.
   const weekly: WeeklyPoint[] = [];
@@ -97,7 +134,7 @@ export default async function ActivityLogPage() {
     <div className="mx-auto max-w-2xl space-y-6">
       <PageHeader
         title="Log Activity"
-        description="Track your daily prospecting funnel. Pre-filled from yesterday — just edit what's different."
+        description="Track your daily prospecting funnel. Each day starts fresh — log what you actually did today."
       />
       <ActivityLogForm
         today={today}
@@ -107,6 +144,7 @@ export default async function ActivityLogPage() {
         initialTodayLogged={todayLogged}
         weekly={weekly}
         pipeline={pipeline}
+        yesterday={yesterday}
       />
     </div>
   );

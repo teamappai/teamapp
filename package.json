@@ -12,6 +12,10 @@
     "format:check": "prettier --check .",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:mobile": "playwright test --project=mobile-iphone-se",
+    "test:e2e:desktop": "playwright test --project=desktop",
     "db:types": "supabase gen types typescript --project-id fjgnihkvqplfncmdgtpq > types/supabase.ts",
     "db:migrate": "supabase db push",
     "db:reset": "supabase db reset",
@@ -58,7 +62,9 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.11.3",
     "@eslint/eslintrc": "^3",
+    "@playwright/test": "^1.60.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/papaparse": "^5.5.2",

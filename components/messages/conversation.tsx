@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Hash, Info, Lock, Users } from "lucide-react";
+import { ArrowLeft, Hash, Info, Lock, Users } from "lucide-react";
 import { toast } from "sonner";
 
 import { cn } from "@/lib/utils/index";
@@ -420,6 +420,15 @@ export function Conversation({
     <div className="flex h-full min-w-0 flex-1 flex-col">
       {/* Header */}
       <div className="flex h-14 shrink-0 items-center gap-3 border-b px-4">
+        {/* Mobile: back to the thread list (single-pane navigation). */}
+        <TooltipIconButton
+          aria-label="Back to conversations"
+          tooltip="Back"
+          onClick={() => router.push("/app/messages")}
+          className="-ml-2 md:hidden"
+        >
+          <ArrowLeft className="size-5" />
+        </TooltipIconButton>
         {isChannel ? (
           <span className="bg-muted text-muted-foreground flex size-8 shrink-0 items-center justify-center rounded-md">
             {thread.visibility === "private" ? (

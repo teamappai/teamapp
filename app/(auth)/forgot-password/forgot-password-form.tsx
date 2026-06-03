@@ -57,7 +57,11 @@ export function ForgotPasswordForm() {
               <FormControl>
                 <Input
                   type="email"
+                  inputMode="email"
                   autoComplete="email"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
                   placeholder="you@example.com"
                   {...field}
                 />

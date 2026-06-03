@@ -18,9 +18,7 @@ export function GoalProgressBar({
         <span className="font-medium">{goal.label}</span>
         <span className="text-muted-foreground tabular-nums">
           {goal.actualDisplay}{" "}
-          <span className="text-muted-foreground/70">
-            / {goal.targetDisplay}
-          </span>
+          <span className="text-muted-foreground">/ {goal.targetDisplay}</span>
         </span>
       </div>
       <div className="bg-muted h-2 overflow-hidden rounded-full">

@@ -33,6 +33,13 @@ export function AppShell({
 
   return (
     <div className="flex min-h-screen">
+      {/* Skip link — first focusable element, visible on focus (WCAG 2.4.1). */}
+      <a
+        href="#main-content"
+        className="bg-background focus-visible:ring-ring sr-only z-50 rounded-md border px-4 py-2 text-sm font-medium shadow focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus-visible:ring-2 focus-visible:outline-none"
+      >
+        Skip to main content
+      </a>
       <aside className="border-sidebar-border hidden w-60 shrink-0 border-r lg:block">
         <div className="sticky top-0 h-screen">
           <SidebarContent data={sidebar} />
@@ -47,7 +54,9 @@ export function AppShell({
           notifications={notifications}
           onMenuClick={() => setDrawerOpen(true)}
         />
-        <main className="flex-1 px-4 py-6 sm:px-6">{children}</main>
+        <main id="main-content" className="flex-1 px-4 py-6 sm:px-6">
+          {children}
+        </main>
       </div>
 
       <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>

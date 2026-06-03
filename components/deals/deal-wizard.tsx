@@ -444,8 +444,20 @@ export function DealWizard({
     (k) => !state.confirmed.has(k),
   ).length;
 
+  const primaryAction =
+    state.step === 4 ? (
+      <Button onClick={onSubmit} disabled={busy} className="w-full sm:w-auto">
+        {busy ? <Loader2 className="size-4 animate-spin" /> : null}
+        Create deal
+      </Button>
+    ) : state.step > 1 ? (
+      <Button onClick={goNext} disabled={busy} className="w-full sm:w-auto">
+        Continue
+      </Button>
+    ) : null;
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-40 sm:pb-0">
       <StepIndicator step={state.step} />
 
       {state.files.length > 0 && state.step !== 1 ? (
@@ -495,8 +507,8 @@ export function DealWizard({
         />
       ) : null}
 
-      {/* Footer nav — Save as draft available on every step. */}
-      <div className="flex items-center justify-between border-t pt-4">
+      {/* Footer nav (desktop) — Save as draft available on every step. */}
+      <div className="hidden items-center justify-between border-t pt-4 sm:flex">
         <div>
           {state.step > 1 ? (
             <Button variant="ghost" onClick={goBack} disabled={busy}>
@@ -508,18 +520,34 @@ export function DealWizard({
           <Button variant="outline" onClick={onSaveDraft} disabled={busy}>
             Save as draft
           </Button>
-          {state.step < 4 && state.step > 1 ? (
-            <Button onClick={goNext} disabled={busy}>
-              Continue
-            </Button>
-          ) : null}
-          {state.step === 4 ? (
-            <Button onClick={onSubmit} disabled={busy}>
-              {busy ? <Loader2 className="size-4 animate-spin" /> : null}
-              Create deal
-            </Button>
-          ) : null}
+          {primaryAction}
         </div>
+      </div>
+
+      {/* Footer nav (mobile) — bottom-fixed, full-width buttons (Decision 2). */}
+      <div className="bg-background/95 safe-area-bottom fixed inset-x-0 bottom-0 z-20 flex flex-col gap-2 border-t px-4 pt-3 backdrop-blur sm:hidden">
+        <div className="flex gap-2">
+          {state.step > 1 ? (
+            <Button
+              variant="outline"
+              onClick={goBack}
+              disabled={busy}
+              className="flex-1"
+            >
+              Back
+            </Button>
+          ) : null}
+          {primaryAction}
+        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onSaveDraft}
+          disabled={busy}
+          className="w-full"
+        >
+          Save as draft
+        </Button>
       </div>
     </div>
   );
