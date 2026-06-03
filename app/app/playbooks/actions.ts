@@ -6,8 +6,10 @@ import { logAudit } from "@/lib/audit/log";
 import {
   installPlaybook,
   uninstallPlaybook,
+  listInstalledPlaybookIds,
   type InstallCapCheck,
 } from "@/lib/playbooks/installs";
+import { captureServer } from "@/lib/posthog/server";
 
 export type InstallActionResult =
   | { ok: true; sectionsCount: number; modulesCount: number }
@@ -51,6 +53,14 @@ export async function installPlaybookAction(
       modules_count: res.modulesCount,
     },
   });
+  const installedAfter = await listInstalledPlaybookIds(companyId);
+  await captureServer(
+    "playbook_installed",
+    { playbook_id: playbookId, install_count_after: installedAfter.size },
+    profile.id,
+    { company: companyId },
+  );
+
   revalidatePath("/app/playbooks");
   revalidatePath(`/app/playbooks/${playbookId}`);
   return {

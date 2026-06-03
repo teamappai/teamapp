@@ -68,7 +68,9 @@ export function CoachingReplyThread({
                     {formatDate(r.createdAt, "relative")}
                   </span>
                 </p>
-                <p className="text-sm">{r.body}</p>
+                <p data-ph-mask className="text-sm">
+                  {r.body}
+                </p>
               </div>
             </li>
           ))}
@@ -79,6 +81,7 @@ export function CoachingReplyThread({
         <div className="space-y-2">
           <Textarea
             value={body}
+            data-ph-no-capture
             onChange={(e) => setBody(e.target.value)}
             placeholder="Write a reply…"
             rows={2}

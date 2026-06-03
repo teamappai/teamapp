@@ -10,6 +10,8 @@ import { getStreak } from "@/lib/coaching/streak";
 import { addDaysIso, todayIso } from "@/lib/coaching/dates";
 import { logAudit } from "@/lib/audit/log";
 import { formatDate } from "@/lib/utils/format";
+import { captureServer } from "@/lib/posthog/server";
+import type { ActivityMetricKey } from "@/lib/constants/activity-metrics";
 
 export type ActivityLogResult =
   | {
@@ -91,6 +93,62 @@ export async function submitActivityLog(
     .eq("user_id", userId)
     .eq("log_date", today);
   const todayLogged = (count ?? 0) > 0;
+
+  // ── PostHog: activity_log_submitted (PA-5 / F-113) ──────────────────────────
+  // The headline engagement event. Send every metric count plus the rollups so
+  // the Daily Activity Log adoption funnel and streak analyses are queryable.
+  const metricCounts = values as Record<ActivityMetricKey, number>;
+  const totalActivities = Object.values(metricCounts).reduce(
+    (sum, n) => sum + (typeof n === "number" ? n : 0),
+    0,
+  );
+  const groups = { company: companyId };
+  await captureServer(
+    "activity_log_submitted",
+    {
+      ...metricCounts,
+      total_activities: totalActivities,
+      streak_day_count: streak,
+      is_off_day: isOffDay,
+    },
+    userId,
+    groups,
+  );
+
+  // ── PostHog: activity_log_streak_broken ─────────────────────────────────────
+  // Only meaningful on a fresh same-day log: if the most recent PRIOR log is
+  // older than yesterday, the streak lapsed before this entry restarted it.
+  if (logDate === today) {
+    const { data: priorRows } = await supabase
+      .from("activity_logs")
+      .select("log_date")
+      .eq("user_id", userId)
+      .lt("log_date", today)
+      .gte("log_date", addDaysIso(today, -90))
+      .order("log_date", { ascending: false });
+    const prior = priorRows ?? [];
+    const lastLoggedAt = prior[0]?.log_date ?? null;
+    if (lastLoggedAt && lastLoggedAt < addDaysIso(today, -1)) {
+      // Walk back from the last logged day to size the streak that was lost.
+      const logged = new Set(prior.map((r) => r.log_date));
+      let previousStreak = 0;
+      let cursor = lastLoggedAt;
+      while (logged.has(cursor)) {
+        previousStreak += 1;
+        cursor = addDaysIso(cursor, -1);
+      }
+      await captureServer(
+        "activity_log_streak_broken",
+        {
+          previous_streak: previousStreak,
+          last_logged_at: lastLoggedAt,
+          agent_id: userId,
+        },
+        userId,
+        groups,
+      );
+    }
+  }
 
   revalidatePath("/app/activity-log");
   revalidatePath("/app/coaching");

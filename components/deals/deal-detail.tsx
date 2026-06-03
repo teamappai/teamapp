@@ -155,7 +155,9 @@ export function DealDetail(props: Props) {
             {deal.property_address ?? "Untitled property"}
           </h1>
           <p className="text-muted-foreground text-sm">
-            {clientName(deal.client_first_name, deal.client_last_name)}
+            <span data-ph-mask>
+              {clientName(deal.client_first_name, deal.client_last_name)}
+            </span>
             {props.primaryAgentName ? ` · ${props.primaryAgentName}` : ""}
             {deal.representing
               ? ` · ${REPRESENTING_LABELS[deal.representing]}`
@@ -395,24 +397,28 @@ function OverviewTab(props: Props) {
           </div>
           <Input
             aria-label="Client first name"
+            data-ph-no-capture
             value={f.client_first_name}
             placeholder="Client first name"
             onChange={(e) => set("client_first_name", e.target.value)}
           />
           <Input
             aria-label="Client last name"
+            data-ph-no-capture
             value={f.client_last_name}
             placeholder="Client last name"
             onChange={(e) => set("client_last_name", e.target.value)}
           />
           <Input
             aria-label="Client email"
+            data-ph-no-capture
             value={f.client_email}
             placeholder="Client email"
             onChange={(e) => set("client_email", e.target.value)}
           />
           <Input
             aria-label="Client phone"
+            data-ph-no-capture
             value={f.client_phone}
             placeholder="Client phone"
             onChange={(e) => set("client_phone", e.target.value)}
@@ -891,6 +897,7 @@ function CommentsTab(props: Props) {
       <div className="space-y-2">
         <Textarea
           value={body}
+          data-ph-no-capture
           onChange={(e) => setBody(e.target.value)}
           placeholder="Add a comment…"
           rows={3}

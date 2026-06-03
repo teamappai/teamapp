@@ -433,6 +433,7 @@ export function Composer({
           <textarea
             ref={taRef}
             value={text}
+            data-ph-no-capture
             onChange={onChange}
             onKeyDown={onKeyDown}
             onScroll={() => {

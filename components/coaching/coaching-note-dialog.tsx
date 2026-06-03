@@ -98,6 +98,7 @@ export function CoachingNoteDialog({
           <Textarea
             id="note-body"
             value={body}
+            data-ph-no-capture
             onChange={(e) => setBody(e.target.value)}
             placeholder="What did you discuss? What's the focus for next week?"
             rows={4}

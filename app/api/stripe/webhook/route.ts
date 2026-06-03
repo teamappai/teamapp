@@ -16,6 +16,7 @@ import {
   emailCancellationCompleted,
   emailTrialEnding,
 } from "@/lib/email/billing";
+import { captureServer } from "@/lib/posthog/server";
 
 /**
  * Stripe webhook handler (Phase 12). Verifies the signature, enforces
@@ -151,6 +152,14 @@ async function handleEvent(event: Stripe.Event): Promise<void> {
           .eq("id", companyId);
         const email = await teamLeadEmail(companyId);
         if (email) await emailCancellationCompleted({ to: email });
+        // PostHog: unsubscribe_completed (CR-3 billing intent funnel terminus).
+        // No user in a webhook — attribute to the company group/distinctId.
+        await captureServer(
+          "unsubscribe_completed",
+          { company_id: companyId },
+          companyId,
+          { company: companyId },
+        );
       }
       break;
     }

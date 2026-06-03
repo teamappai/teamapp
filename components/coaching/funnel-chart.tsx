@@ -1,6 +1,7 @@
 import { buildFunnel, type FunnelInput } from "@/lib/coaching/aggregate";
 import { formatNumber, formatPercent } from "@/lib/utils/format";
 import { Card, CardContent } from "@/components/ui/card";
+import { TrackClick } from "@/components/posthog/track-click";
 
 /**
  * The canonical 7-stage coaching funnel (PA-5), rendered as a horizontal funnel
@@ -39,26 +40,32 @@ export function FunnelChart({ input }: { input: FunnelInput }) {
                 </span>
               </div>
             ) : null}
-            <div
-              className="flex items-center gap-3"
-              title={`${stage.label}: ${formatNumber(stage.value)}`}
+            <TrackClick
+              event="coaching_funnel_stage_drilled"
+              properties={{ stage_name: stage.key }}
+              className="flex cursor-pointer items-center gap-3"
             >
-              <div className="w-32 shrink-0 text-sm font-medium">
-                {stage.label}
-              </div>
-              <div className="bg-muted/40 h-7 flex-1 overflow-hidden rounded">
-                <div
-                  className={`flex h-full items-center rounded ${BAR_COLORS[i]} min-w-[2.5rem] px-2`}
-                  style={{
-                    width: `${Math.max(6, (stage.value / max) * 100)}%`,
-                  }}
-                >
-                  <span className="text-xs font-semibold text-white tabular-nums">
-                    {formatNumber(stage.value)}
-                  </span>
+              <div
+                className="flex flex-1 items-center gap-3"
+                title={`${stage.label}: ${formatNumber(stage.value)}`}
+              >
+                <div className="w-32 shrink-0 text-sm font-medium">
+                  {stage.label}
+                </div>
+                <div className="bg-muted/40 h-7 flex-1 overflow-hidden rounded">
+                  <div
+                    className={`flex h-full items-center rounded ${BAR_COLORS[i]} min-w-[2.5rem] px-2`}
+                    style={{
+                      width: `${Math.max(6, (stage.value / max) * 100)}%`,
+                    }}
+                  >
+                    <span className="text-xs font-semibold text-white tabular-nums">
+                      {formatNumber(stage.value)}
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
+            </TrackClick>
           </div>
         ))}
       </CardContent>

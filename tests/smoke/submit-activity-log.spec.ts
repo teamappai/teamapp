@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "../helpers/fixtures";
 import { loginAs } from "../helpers/auth";
 import { clickVisible, expectToast } from "../helpers/ui";
 

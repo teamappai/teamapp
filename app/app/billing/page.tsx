@@ -14,6 +14,7 @@ import { getPlan, type PlanId, type BillingCycle } from "@/lib/billing/plans";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { BillingTabs, type BillingData } from "./billing-tabs";
+import { TrackOnMount } from "@/components/posthog/track-on-mount";
 
 export const metadata: Metadata = { title: "Billing | TeamApp" };
 
@@ -87,6 +88,7 @@ export default async function BillingPage() {
 
   return (
     <div className="space-y-6">
+      <TrackOnMount event="billing_dashboard_viewed" properties={{}} />
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Billing</h1>
         <p className="text-muted-foreground text-sm">

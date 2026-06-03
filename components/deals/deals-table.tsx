@@ -405,7 +405,7 @@ export function DealsTable({
                       <span className="bg-muted flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-medium">
                         {clientInitials(d.clientFirstName, d.clientLastName)}
                       </span>
-                      <span className="whitespace-nowrap">
+                      <span data-ph-mask className="whitespace-nowrap">
                         {clientName(d.clientFirstName, d.clientLastName)}
                       </span>
                     </div>

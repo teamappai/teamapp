@@ -30,6 +30,7 @@ import {
   emailPlanDowngraded,
   emailSubscriptionPaused,
 } from "@/lib/email/billing";
+import { captureServer } from "@/lib/posthog/server";
 
 export type BillingActionResult =
   | { ok: true; message?: string }
@@ -133,6 +134,19 @@ export async function changePlan(input: {
       resource_id: ctx.companyId,
       metadata: { plan: input.plan, cycle: input.cycle, seats },
     });
+
+    // PostHog: seats_added (CR-3 expansion lever) — only when seats grew.
+    if (seats > company.seats_total) {
+      await captureServer(
+        "seats_added",
+        {
+          seats_added_count: seats - company.seats_total,
+          new_total_seats: seats,
+        },
+        ctx.actorId,
+        { company: ctx.companyId },
+      );
+    }
     if (isUpgrade) {
       await emailPlanUpgraded({
         to: ctx.email,

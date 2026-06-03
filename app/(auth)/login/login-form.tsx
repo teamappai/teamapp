@@ -10,6 +10,8 @@ import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { loginSchema, type LoginInput } from "@/lib/validations/auth";
 import { signIn } from "../actions";
+import { capture } from "@/lib/posthog/client";
+import { deviceTypeFromUA, browserFromUA } from "@/lib/posthog/device";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -32,7 +34,23 @@ export function LoginForm({ next }: { next: string | null }) {
 
   async function onSubmit(values: LoginInput) {
     const result = await signIn({ ...values, next });
+
+    // Auth instrumentation (SR-4): tag every attempt with device/browser so the
+    // mobile login bug is diagnosable. login_attempted fires for both outcomes;
+    // login_failed adds the error code on the failure path.
+    const ua = typeof navigator !== "undefined" ? navigator.userAgent : null;
+    const device_type = deviceTypeFromUA(ua);
+    capture("login_attempted", {
+      device_type,
+      browser: browserFromUA(ua),
+      success: result.ok,
+    });
     if (!result.ok) {
+      capture("login_failed", {
+        device_type,
+        error_code: "invalid_credentials",
+        error_message: result.error,
+      });
       form.setError("password", { message: result.error });
       return;
     }
