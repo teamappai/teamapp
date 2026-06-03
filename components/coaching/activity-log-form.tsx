@@ -2,16 +2,16 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { CalendarDays, Loader2 } from "lucide-react";
+import { CalendarDays, Info, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 
 import {
   ACTIVITY_GROUPS,
   metricsForGroup,
   zeroMetrics,
+  type ActivityGroupKey,
   type ActivityMetricKey,
 } from "@/lib/constants/activity-metrics";
-import { addDaysIso } from "@/lib/coaching/dates";
 import { streakChipText } from "@/lib/coaching/streak-format";
 import type { PipelineSummary } from "@/lib/coaching/pipeline";
 import { submitActivityLog } from "@/app/app/activity-log/actions";
@@ -34,6 +34,17 @@ import {
 export type MetricValues = Record<ActivityMetricKey, number>;
 export type DayLog = { values: MetricValues; isOffDay: boolean };
 
+/** Read-only "yesterday" snapshot rendered as a reference card below the form. */
+export type YesterdayReference = {
+  date: string;
+  logged: boolean;
+  isOffDay: boolean;
+  total: number;
+  groups: Record<ActivityGroupKey, number>;
+};
+
+const FRESH_START_DISMISSED_KEY = "teamapp.activityLog.freshStartDismissed";
+
 const PIPELINE_ROWS: Array<{ key: keyof PipelineSummary; label: string }> = [
   { key: "underContract", label: "Under Contract" },
   { key: "closedInPeriod", label: "Closed" },
@@ -50,6 +61,7 @@ export function ActivityLogForm({
   initialTodayLogged,
   weekly,
   pipeline,
+  yesterday,
 }: {
   today: string;
   minDate: string;
@@ -58,14 +70,15 @@ export function ActivityLogForm({
   initialTodayLogged: boolean;
   weekly: WeeklyPoint[];
   pipeline: PipelineSummary;
+  yesterday: YesterdayReference;
 }) {
+  // Phase 14 daily-reset (USER OVERRIDE): a day with a saved log re-opens for
+  // editing; any new day starts at all-zeros. Yesterday's numbers are NOT
+  // carried forward — they live in the read-only reference card below.
   const prefillFor = React.useCallback(
     (date: string): DayLog => {
       const existing = logsByDate[date];
       if (existing) return existing;
-      // New day: carry yesterday's numbers forward as a starting point (PA-5).
-      const prev = logsByDate[addDaysIso(date, -1)];
-      if (prev) return { values: { ...prev.values }, isOffDay: false };
       return { values: zeroMetrics(), isOffDay: false };
     },
     [logsByDate],
@@ -80,6 +93,29 @@ export function ActivityLogForm({
 
   const [streak, setStreak] = React.useState(initialStreak);
   const [todayLogged, setTodayLogged] = React.useState(initialTodayLogged);
+
+  // First-visit notice explaining the fresh-start behavior. Mounted hidden,
+  // then revealed only if the user hasn't dismissed it before (avoids a
+  // hydration flash and respects the stored preference).
+  const [showFreshNotice, setShowFreshNotice] = React.useState(false);
+  React.useEffect(() => {
+    try {
+      if (localStorage.getItem(FRESH_START_DISMISSED_KEY) !== "1") {
+        setShowFreshNotice(true);
+      }
+    } catch {
+      // localStorage unavailable (private mode): just show it.
+      setShowFreshNotice(true);
+    }
+  }, []);
+  const dismissFreshNotice = () => {
+    setShowFreshNotice(false);
+    try {
+      localStorage.setItem(FRESH_START_DISMISSED_KEY, "1");
+    } catch {
+      // ignore persistence failures
+    }
+  };
 
   // Re-prefill whenever the selected date changes.
   const onDateChange = (next: string) => {
@@ -156,6 +192,27 @@ export function ActivityLogForm({
           <span className="font-medium">Mark as off-day</span>
         </label>
       </div>
+
+      {showFreshNotice ? (
+        <div className="bg-muted/40 flex items-start gap-3 rounded-md border px-3 py-2.5 text-sm">
+          <Info className="text-primary mt-0.5 size-4 shrink-0" />
+          <p className="text-muted-foreground flex-1">
+            <span className="text-foreground font-medium">
+              Each day starts fresh.
+            </span>{" "}
+            Log what you actually did today. Yesterday&apos;s totals are shown
+            below for reference.
+          </p>
+          <button
+            type="button"
+            onClick={dismissFreshNotice}
+            aria-label="Dismiss"
+            className="text-muted-foreground hover:text-foreground -m-1 shrink-0 p-1"
+          >
+            <X className="size-4" />
+          </button>
+        </div>
+      ) : null}
 
       {isOffDay ? (
         <p className="text-muted-foreground rounded-md border border-dashed px-3 py-2 text-sm">
@@ -247,6 +304,9 @@ export function ActivityLogForm({
         </CardContent>
       </Card>
 
+      {/* Yesterday's totals — reference only, never pre-filled into the form */}
+      <YesterdayCard yesterday={yesterday} />
+
       {/* Desktop submit */}
       <div className="hidden sm:flex sm:justify-end">
         <Button onClick={onSubmit} disabled={pending} size="lg">
@@ -255,8 +315,8 @@ export function ActivityLogForm({
         </Button>
       </div>
 
-      {/* Sticky mobile submit */}
-      <div className="bg-background/95 fixed inset-x-0 bottom-0 z-20 border-t p-3 backdrop-blur sm:hidden">
+      {/* Sticky mobile submit — clears the home indicator via safe-area-inset */}
+      <div className="bg-background/95 safe-area-bottom fixed inset-x-0 bottom-0 z-20 border-t px-3 pt-3 backdrop-blur sm:hidden">
         <Button
           onClick={onSubmit}
           disabled={pending}
@@ -268,5 +328,60 @@ export function ActivityLogForm({
         </Button>
       </div>
     </div>
+  );
+}
+
+const GROUP_LABEL: Record<ActivityGroupKey, string> = {
+  top_of_funnel: "Top of Funnel",
+  appointments: "Appointments",
+  pipeline: "Pipeline",
+};
+
+/** Read-only summary of what was logged yesterday, for at-a-glance reference. */
+function YesterdayCard({ yesterday }: { yesterday: YesterdayReference }) {
+  const niceDate = new Date(`${yesterday.date}T00:00:00`).toLocaleDateString(
+    "en-US",
+    { weekday: "long", month: "short", day: "numeric" },
+  );
+
+  return (
+    <Card className="gap-0 py-4">
+      <CardContent className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-semibold">
+            Yesterday&apos;s totals{" "}
+            <span className="text-muted-foreground font-normal">
+              ({niceDate})
+            </span>
+          </h3>
+          {yesterday.logged ? (
+            <span className="text-muted-foreground text-sm tabular-nums">
+              {yesterday.total} total
+            </span>
+          ) : null}
+        </div>
+        {!yesterday.logged ? (
+          <p className="text-muted-foreground text-sm">
+            No activity logged yesterday.
+          </p>
+        ) : yesterday.isOffDay ? (
+          <p className="text-muted-foreground text-sm">Marked as an off-day.</p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {(Object.keys(GROUP_LABEL) as ActivityGroupKey[]).map((g) => (
+              <div
+                key={g}
+                className="bg-muted/50 flex items-center gap-1.5 rounded-md px-2.5 py-1 text-sm"
+              >
+                <span className="text-muted-foreground">{GROUP_LABEL[g]}</span>
+                <span className="font-semibold tabular-nums">
+                  {yesterday.groups[g]}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }

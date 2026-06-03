@@ -4,9 +4,12 @@ import { cn } from "@/lib/utils/index";
 export function ProgressBar({
   percent,
   className,
+  label = "Progress",
 }: {
   percent: number;
   className?: string;
+  /** Accessible name for the progressbar (WCAG aria-progressbar-name). */
+  label?: string;
 }) {
   const clamped = Math.max(0, Math.min(100, percent));
   return (
@@ -16,6 +19,7 @@ export function ProgressBar({
         className,
       )}
       role="progressbar"
+      aria-label={label}
       aria-valuenow={clamped}
       aria-valuemin={0}
       aria-valuemax={100}

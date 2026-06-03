@@ -282,7 +282,7 @@ export function Composer({
   }, [text, mentions]);
 
   return (
-    <div className="border-t px-3 py-2.5 sm:px-4">
+    <div className="safe-area-bottom border-t px-3 pt-2.5 sm:px-4">
       {replyingTo ? (
         <div className="bg-muted/40 text-muted-foreground mb-2 flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-xs">
           <span className="min-w-0 flex-1 truncate">

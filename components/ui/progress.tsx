@@ -21,6 +21,9 @@ function Progress({
   return (
     <ProgressPrimitive.Root
       data-slot="progress"
+      // Default accessible name (WCAG aria-progressbar-name); callers can
+      // override via aria-label / aria-labelledby in props.
+      aria-label="Progress"
       className={cn(
         "bg-primary/20 relative h-2 w-full overflow-hidden rounded-full",
         className,

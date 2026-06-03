@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import {
@@ -41,6 +41,16 @@ export const metadata: Metadata = {
     description: SITE_DESCRIPTION,
     images: [OG_IMAGE],
   },
+};
+
+/**
+ * viewport-fit=cover lets the layout extend under the notch / home indicator so
+ * our safe-area-inset utilities (globals.css) can pad sticky bars correctly.
+ */
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 /** JSON-LD Organization schema for rich search results. */

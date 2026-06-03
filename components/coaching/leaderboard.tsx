@@ -96,7 +96,101 @@ export function Leaderboard({
     <Card className="gap-0 py-4">
       <CardContent className="space-y-3">
         <h2 className="text-sm font-semibold">Leaderboard</h2>
-        <div className="overflow-x-auto">
+
+        {/* Mobile card list (≤768px) */}
+        <ol className="space-y-2 md:hidden">
+          {sorted.map((row, i) => (
+            <li
+              key={row.userId}
+              className={cn(
+                "rounded-md border p-3",
+                row.userId === highlightUserId && "bg-muted/40",
+              )}
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground w-4 shrink-0 text-center text-xs font-medium tabular-nums">
+                  {i + 1}
+                </span>
+                <UserAvatar
+                  name={row.name}
+                  src={row.avatarUrl}
+                  seed={row.userId}
+                  size="sm"
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="truncate font-medium">{row.name}</div>
+                  {row.goalLabel ? (
+                    <div className="text-muted-foreground truncate text-xs">
+                      Goal: {row.goalLabel}
+                    </div>
+                  ) : null}
+                </div>
+                <span className="shrink-0 text-sm font-semibold tabular-nums">
+                  {leaderboardCurrency(row.gciCents)}
+                </span>
+                {isCoach ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="shrink-0"
+                        aria-label={`Actions for ${row.name}`}
+                      >
+                        <MoreHorizontal className="size-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        onClick={() =>
+                          setDialog({
+                            kind: "goals",
+                            agent: { id: row.userId, name: row.name },
+                          })
+                        }
+                      >
+                        <Target className="size-4" /> Set goals
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() =>
+                          setDialog({
+                            kind: "note",
+                            agent: { id: row.userId, name: row.name },
+                          })
+                        }
+                      >
+                        <MessageSquarePlus className="size-4" /> Add coaching
+                        note
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() =>
+                          setDialog({
+                            kind: "nudge",
+                            agent: { id: row.userId, name: row.name },
+                          })
+                        }
+                      >
+                        <Send className="size-4" /> Send nudge
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : null}
+              </div>
+              <div className="text-muted-foreground mt-2 flex flex-wrap gap-x-4 gap-y-1 pl-6 text-xs tabular-nums">
+                <span>{leaderboardCount(row.closedDeals)} closed</span>
+                <span>{leaderboardCurrency(row.closedVolumeCents)} vol</span>
+                <span>{leaderboardCount(row.appointments)} appts</span>
+                <span>
+                  {row.lastActivityAt
+                    ? formatDate(row.lastActivityAt, "relative")
+                    : "Never logged"}
+                </span>
+              </div>
+            </li>
+          ))}
+        </ol>
+
+        <div className="hidden overflow-x-auto md:block">
           <Table>
             <TableHeader>
               <TableRow>

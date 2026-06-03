@@ -95,7 +95,7 @@ function MultiSelectFilter({
       <DropdownMenuTrigger asChild>
         <Button
           variant="outline"
-          className="min-w-[11rem] justify-between font-normal"
+          className="w-full justify-between font-normal sm:w-auto sm:min-w-[11rem]"
         >
           <span className="truncate">
             {label}
@@ -211,7 +211,7 @@ export function DealsTable({
   return (
     <div className="space-y-4">
       {/* Filter row */}
-      <div className="flex flex-wrap items-end gap-3">
+      <div className="grid grid-cols-1 items-end gap-3 sm:flex sm:flex-wrap">
         <MultiSelectFilter
           label="Stage"
           options={stages}
@@ -242,8 +242,8 @@ export function DealsTable({
           onToggle={toggle(setRepSel)}
           onClear={() => setRepSel(new Set())}
         />
-        <div className="flex items-end gap-2">
-          <div className="space-y-1">
+        <div className="flex w-full items-end gap-2 sm:w-auto">
+          <div className="flex-1 space-y-1 sm:flex-none">
             <Label htmlFor="deal-from" className="text-xs">
               From
             </Label>
@@ -252,10 +252,10 @@ export function DealsTable({
               type="date"
               value={from}
               onChange={(e) => setFrom(e.target.value)}
-              className="w-[10rem]"
+              className="w-full sm:w-[10rem]"
             />
           </div>
-          <div className="space-y-1">
+          <div className="flex-1 space-y-1 sm:flex-none">
             <Label htmlFor="deal-to" className="text-xs">
               To
             </Label>
@@ -264,7 +264,7 @@ export function DealsTable({
               type="date"
               value={to}
               onChange={(e) => setTo(e.target.value)}
-              className="w-[10rem]"
+              className="w-full sm:w-[10rem]"
             />
           </div>
         </div>
@@ -277,8 +277,71 @@ export function DealsTable({
         {filtered.length} {filtered.length === 1 ? "deal" : "deals"}
       </p>
 
-      {/* Table */}
-      <div className="rounded-md border">
+      {/* Mobile card list (≤768px) — the table is unreadable on phones. */}
+      <div className="space-y-2 md:hidden">
+        {filtered.length === 0 ? (
+          <div className="rounded-md border">
+            <EmptyState
+              title="No deals match these filters"
+              description="Try widening the stage or date filters."
+            />
+          </div>
+        ) : (
+          filtered.map((d) => (
+            <button
+              key={d.id}
+              type="button"
+              onClick={() => router.push(`/app/deals/${d.id}`)}
+              className="hover:bg-muted/50 focus-visible:ring-ring/50 block w-full rounded-md border p-3 text-left focus-visible:ring-2 focus-visible:outline-none"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <span className="block truncate font-medium">
+                    {d.propertyAddress ?? "—"}
+                  </span>
+                  {d.propertyCity ? (
+                    <span className="text-muted-foreground block truncate text-xs">
+                      {[d.propertyCity, d.propertyState]
+                        .filter(Boolean)
+                        .join(", ")}
+                    </span>
+                  ) : null}
+                </div>
+                {d.stageName ? (
+                  <StatusChip
+                    domain="deal"
+                    status={d.stageStatus}
+                    className="shrink-0"
+                  >
+                    {d.stageName}
+                  </StatusChip>
+                ) : null}
+              </div>
+              <div className="mt-2 flex items-center justify-between gap-2">
+                <div className="flex min-w-0 items-center gap-2">
+                  <UserAvatar
+                    size="sm"
+                    name={d.agentName}
+                    src={d.agentAvatar}
+                    seed={d.agentSeed}
+                  />
+                  <span className="text-muted-foreground truncate text-xs">
+                    {d.agentName ?? "Unassigned"}
+                  </span>
+                </div>
+                <span className="shrink-0 text-sm font-semibold tabular-nums">
+                  {d.salesPriceCents != null
+                    ? formatCurrency(d.salesPriceCents)
+                    : "—"}
+                </span>
+              </div>
+            </button>
+          ))
+        )}
+      </div>
+
+      {/* Table (≥768px) */}
+      <div className="hidden rounded-md border md:block">
         <Table>
           <TableHeader>
             <TableRow>

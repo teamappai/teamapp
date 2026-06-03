@@ -39,6 +39,7 @@ export function OnboardingWidget({
       <div
         className="bg-sidebar-border mt-2 h-1.5 w-full overflow-hidden rounded-full"
         role="progressbar"
+        aria-label="Onboarding progress"
         aria-valuenow={percent}
         aria-valuemin={0}
         aria-valuemax={100}

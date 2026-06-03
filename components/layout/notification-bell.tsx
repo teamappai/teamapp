@@ -7,7 +7,7 @@ import { Bell } from "lucide-react";
 
 import { markAllNotificationsRead } from "@/app/app/requests/actions";
 import { formatDate } from "@/lib/utils/format";
-import { TooltipIconButton } from "@/components/shared/tooltip-icon-button";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -90,18 +90,21 @@ export function NotificationBell({
 
   return (
     <DropdownMenu onOpenChange={onOpenChange}>
-      <DropdownMenuTrigger asChild>
-        <div className="relative">
-          <TooltipIconButton aria-label="Notifications" tooltip="Notifications">
+      {/* The trigger must be a real <button> so its aria-expanded is valid
+          (a <div> trigger fails axe aria-allowed-attr). The unread badge sits
+          in a non-interactive relative wrapper around it. */}
+      <div className="relative">
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="icon" aria-label="Notifications">
             <Bell className="size-5" />
-          </TooltipIconButton>
-          {unread > 0 ? (
-            <span className="bg-destructive pointer-events-none absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-semibold text-white">
-              {unread > 9 ? "9+" : unread}
-            </span>
-          ) : null}
-        </div>
-      </DropdownMenuTrigger>
+          </Button>
+        </DropdownMenuTrigger>
+        {unread > 0 ? (
+          <span className="bg-destructive pointer-events-none absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-semibold text-white">
+            {unread > 9 ? "9+" : unread}
+          </span>
+        ) : null}
+      </div>
       <DropdownMenuContent align="end" className="w-80">
         <DropdownMenuLabel>Notifications</DropdownMenuLabel>
         <DropdownMenuSeparator />

@@ -5,6 +5,11 @@
 
 :root {
   --radius: 0.625rem;
+  /* Safe-area insets (notch / home indicator). Fall back to 0 off-device. */
+  --safe-area-inset-top: env(safe-area-inset-top, 0px);
+  --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-inset-left: env(safe-area-inset-left, 0px);
+  --safe-area-inset-right: env(safe-area-inset-right, 0px);
   --background: oklch(1 0 0);
   --foreground: oklch(0.129 0.042 264.695);
   --card: oklch(1 0 0);
@@ -16,7 +21,10 @@
   --secondary: oklch(0.968 0.007 247.896);
   --secondary-foreground: oklch(0.208 0.042 265.755);
   --muted: oklch(0.968 0.007 247.896);
-  --muted-foreground: oklch(0.554 0.046 257.417);
+  /* Darkened from 0.554 to clear WCAG AA 4.5:1 on white and on bg-muted
+     (Phase 14 a11y): muted-foreground drives secondary text, neutral chips,
+     and avatar-fallback initials. */
+  --muted-foreground: oklch(0.47 0.04 257.417);
   --accent: oklch(0.968 0.007 247.896);
   --accent-foreground: oklch(0.208 0.042 265.755);
   --destructive: oklch(0.577 0.245 27.325);
@@ -118,5 +126,33 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  /* Minimum WCAG 2.5.5 / Apple HIG thumb-friendly touch target (Phase 14). */
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Sticky bottom bars (composer, activity-log submit, deal nav) clear the
+     home-indicator. max() keeps a comfortable minimum off-device. */
+  .safe-area-bottom {
+    padding-bottom: max(env(safe-area-inset-bottom, 0px), 0.75rem);
+  }
+
+  .safe-area-top {
+    padding-top: max(env(safe-area-inset-top, 0px), 0px);
+  }
+
+  .safe-area-x {
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+  }
+
+  /* Standard visible focus ring for any interactive element missing one. */
+  .focus-ring {
+    @apply focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:outline-none;
   }
 }

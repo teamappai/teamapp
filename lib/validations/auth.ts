@@ -5,7 +5,14 @@ import {
   type UserRole,
 } from "@/lib/constants/roles";
 
-const email = z.email("Enter a valid email address");
+// Normalize before validating (SR-4): mobile keyboards autocapitalize and
+// users add stray whitespace, which broke case-sensitive auth in the Bubble
+// app. trim + lowercase runs first, then the format check.
+const email = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .pipe(z.email("Enter a valid email address"));
 const password = z
   .string()
   .min(8, "Password must be at least 8 characters")

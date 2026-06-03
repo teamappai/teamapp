@@ -68,7 +68,11 @@ export function LoginForm({ next }: { next: string | null }) {
               <FormControl>
                 <Input
                   type="email"
+                  inputMode="email"
                   autoComplete="email"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
                   placeholder="you@example.com"
                   {...field}
                 />
