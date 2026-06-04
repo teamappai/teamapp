@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "../helpers/fixtures";
 import { loginAs, CREDENTIALS, SEED_PASSWORD } from "../helpers/auth";
 
 /**

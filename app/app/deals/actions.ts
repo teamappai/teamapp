@@ -12,6 +12,13 @@ import {
   type DealPatch,
 } from "@/lib/validations/deal";
 import type { Database, Json } from "@/types/supabase";
+import { captureServer } from "@/lib/posthog/server";
+
+/** Client-supplied analytics context for deal_submitted (timing + AI usage). */
+export type DealSubmitMeta = {
+  hasAiExtractedFields: boolean;
+  timeInFormSeconds: number | null;
+};
 
 export type DealActionResult<T = object> =
   | ({ ok: true } & T)
@@ -137,6 +144,7 @@ export async function saveDealDraft(
 export async function submitDeal(
   dealId: string,
   input: unknown,
+  meta?: DealSubmitMeta,
 ): Promise<DealActionResult<{ dealId: string }>> {
   const session = await getSessionProfile();
   if (!session) return { ok: false, error: "Your session has expired." };
@@ -178,6 +186,23 @@ export async function submitDeal(
     event: "created",
     payload: { stage: firstStage?.name ?? null },
   });
+
+  // PostHog: deal_submitted (F-080 — deal creation funnel terminus). Timing +
+  // AI-usage come from the client wizard via `meta`; money + representing from
+  // the validated payload; stage from the resolved first stage.
+  await captureServer(
+    "deal_submitted",
+    {
+      representing: parsed.data.representing,
+      sales_price_cents: parsed.data.sales_price_cents ?? null,
+      gci_cents: parsed.data.gci_cents ?? null,
+      has_ai_extracted_fields: meta?.hasAiExtractedFields ?? false,
+      time_in_form_seconds: meta?.timeInFormSeconds ?? null,
+      stage_at_submit: firstStage?.name ?? null,
+    },
+    session.user.id,
+    companyId ? { company: companyId } : undefined,
+  );
 
   revalidatePath("/app/deals");
   revalidatePath(`/app/deals/${dealId}`);

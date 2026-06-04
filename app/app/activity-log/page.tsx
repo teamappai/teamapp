@@ -15,6 +15,7 @@ import {
   type ActivityMetricKey,
 } from "@/lib/constants/activity-metrics";
 import { PageHeader } from "@/components/shared/page-header";
+import { TrackOnMount } from "@/components/posthog/track-on-mount";
 import {
   ActivityLogForm,
   type DayLog,
@@ -132,6 +133,10 @@ export default async function ActivityLogPage() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
+      <TrackOnMount
+        event="activity_log_opened"
+        properties={{ source: "sidebar", role: session.profile.role }}
+      />
       <PageHeader
         title="Log Activity"
         description="Track your daily prospecting funnel. Each day starts fresh — log what you actually did today."

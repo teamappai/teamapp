@@ -13,6 +13,16 @@ import { notify } from "@/lib/notifications/notify";
 import { logAudit } from "@/lib/audit/log";
 import { sendNudgeMessage } from "@/lib/messages/system";
 import type { UserRole } from "@/lib/constants/roles";
+import { captureServer } from "@/lib/posthog/server";
+import type { EventMap } from "@/lib/posthog/types";
+
+/** Map the app's nudge reason to the PostHog agent_nudge_sent nudge_type. */
+const NUDGE_TYPE: Record<string, EventMap["agent_nudge_sent"]["nudge_type"]> = {
+  stalled_activity: "no_activity",
+  below_goal_pace: "below_goal",
+  stalled_training: "stalled_training",
+  custom: "custom",
+};
 
 const NUDGE_REASON_TEXT: Record<string, string> = {
   stalled_activity: "I noticed your activity has stalled this week.",
@@ -213,6 +223,15 @@ export async function sendNudge(input: unknown): Promise<CoachingResult> {
     resource_id: parsed.data.agentUserId,
     metadata: { reason: parsed.data.reason },
   });
+  await captureServer(
+    "agent_nudge_sent",
+    {
+      agent_id: parsed.data.agentUserId,
+      nudge_type: NUDGE_TYPE[parsed.data.reason] ?? "custom",
+    },
+    c.userId,
+    { company: companyId },
+  );
   revalidatePath("/app/coaching");
   revalidatePath("/app/messages");
   return { ok: true };

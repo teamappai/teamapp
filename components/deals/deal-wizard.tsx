@@ -14,6 +14,7 @@ import {
   recordDealFile,
 } from "@/app/app/deals/actions";
 import { dealStep2Schema, dealStep3Schema } from "@/lib/validations/deal";
+import { capture } from "@/lib/posthog/client";
 import type { ExtractedFields, FieldConfidence } from "@/lib/ai/types";
 import { formatBytes, formatCurrency, formatDate } from "@/lib/utils/format";
 import { contingencyClearsLabel } from "@/lib/deals/contingency";
@@ -254,6 +255,37 @@ export function DealWizard({
   const [busy, setBusy] = React.useState(false);
   const supabase = React.useMemo(() => createClient(), []);
 
+  // ── Deal-form instrumentation (Phase 15, F-080) ─────────────────────────────
+  // Timing + abandonment tracking. formStart is set once on mount; lastField /
+  // touched / submitted are refs so the beforeunload handler reads live values.
+  const formStartRef = React.useRef<number>(Date.now());
+  const lastFieldRef = React.useRef<string | null>(null);
+  const touchedRef = React.useRef(false);
+  const submittedRef = React.useRef(false);
+  const stateRef = React.useRef(state);
+  stateRef.current = state;
+
+  React.useEffect(() => {
+    // deal_form_abandoned (M3): directional, not exact. beforeunload is
+    // unreliable on mobile back-navigation — accept the gaps.
+    function onBeforeUnload() {
+      if (!touchedRef.current || submittedRef.current) return;
+      const fields = stateRef.current.fields as Record<string, unknown>;
+      const filled = Object.values(fields).filter(
+        (v) => v !== "" && v !== null && v !== undefined,
+      ).length;
+      capture("deal_form_abandoned", {
+        last_field_touched: lastFieldRef.current,
+        time_in_form_seconds: Math.round(
+          (Date.now() - formStartRef.current) / 1000,
+        ),
+        fields_filled_count: filled,
+      });
+    }
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, []);
+
   /** Ensure a draft deal row exists (so files can attach); returns its id. */
   const ensureDraft = React.useCallback(async (): Promise<{
     dealId: string;
@@ -361,8 +393,11 @@ export function DealWizard({
     [ensureDraft, supabase],
   );
 
-  const setField = (key: keyof Fields, value: Fields[keyof Fields]) =>
+  const setField = (key: keyof Fields, value: Fields[keyof Fields]) => {
+    touchedRef.current = true;
+    lastFieldRef.current = String(key);
     dispatch({ type: "SET_FIELD", key, value });
+  };
 
   const validateStep = (step: 2 | 3): boolean => {
     const payload = buildPayload(state.fields);
@@ -418,12 +453,19 @@ export function DealWizard({
     const draft = await ensureDraft();
     if (!draft) return;
     setBusy(true);
-    const res = await submitDeal(draft.dealId, buildPayload(state.fields));
+    // Mark submitted BEFORE awaiting so a navigation away mid-submit doesn't
+    // double-count as an abandonment.
+    submittedRef.current = true;
+    const res = await submitDeal(draft.dealId, buildPayload(state.fields), {
+      hasAiExtractedFields: Object.keys(state.ai).length > 0,
+      timeInFormSeconds: Math.round((Date.now() - formStartRef.current) / 1000),
+    });
     setBusy(false);
     if (res.ok) {
       toast.success("Deal created.");
       router.push(`/app/deals/${res.dealId}`);
     } else {
+      submittedRef.current = false;
       toast.error(res.error);
     }
   };
@@ -841,6 +883,7 @@ function StepPropertyClient({
             </FieldLabel>
             <Input
               id="client_first_name"
+              data-ph-no-capture
               value={fields.client_first_name}
               placeholder="Dana"
               onChange={(e) => setField("client_first_name", e.target.value)}
@@ -854,6 +897,7 @@ function StepPropertyClient({
             </FieldLabel>
             <Input
               id="client_last_name"
+              data-ph-no-capture
               value={fields.client_last_name}
               placeholder="Reed"
               onChange={(e) => setField("client_last_name", e.target.value)}
@@ -868,6 +912,7 @@ function StepPropertyClient({
             <Input
               id="client_email"
               type="email"
+              data-ph-no-capture
               value={fields.client_email}
               placeholder="dana@example.com"
               onChange={(e) => setField("client_email", e.target.value)}
@@ -881,6 +926,7 @@ function StepPropertyClient({
             </FieldLabel>
             <Input
               id="client_phone"
+              data-ph-no-capture
               value={fields.client_phone}
               placeholder="(555) 123-4567"
               onChange={(e) => setField("client_phone", e.target.value)}

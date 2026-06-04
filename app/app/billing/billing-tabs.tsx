@@ -33,6 +33,7 @@ import type { PaymentMethodSummary, InvoiceSummary } from "@/lib/billing/state";
 import { pauseSubscriptionAction, resumeSubscriptionAction } from "./actions";
 import { openPortal } from "./portal-button";
 import { PlansTab } from "./plans-tab";
+import { capture } from "@/lib/posthog/client";
 import { HistoryTab } from "./history-tab";
 
 export type BillingData = {
@@ -211,7 +212,10 @@ function OverviewTab({
                   )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
-                    <Link href="/app/billing/cancel">
+                    <Link
+                      href="/app/billing/cancel"
+                      onClick={() => capture("unsubscribe_initiated", {})}
+                    >
                       <XCircle className="size-4" /> Cancel subscription
                     </Link>
                   </DropdownMenuItem>

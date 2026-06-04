@@ -31,6 +31,7 @@ import {
   type NotificationItem,
 } from "@/components/layout/notification-bell";
 import { ROLE_LABELS, type UserRole } from "@/lib/constants/roles";
+import { resetIdentity } from "@/lib/posthog/identify";
 import { isNavItemActive } from "@/components/layout/nav-link";
 import type { NavItem } from "@/lib/constants/nav";
 
@@ -101,7 +102,12 @@ function UserMenu({ identity }: { identity: HeaderIdentity }) {
         </DropdownMenuSub>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild variant="destructive">
-          <form action="/logout" method="post" className="w-full">
+          <form
+            action="/logout"
+            method="post"
+            className="w-full"
+            onSubmit={() => resetIdentity()}
+          >
             <button type="submit" className="flex w-full items-center gap-2">
               <LogOut className="size-4" />
               Sign out

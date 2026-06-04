@@ -14,6 +14,7 @@ import {
   slugifyChannelName,
 } from "@/lib/messages/constants";
 import { extractMentionIds, hasChannelMention } from "@/lib/messages/mentions";
+import { captureServer } from "@/lib/posthog/server";
 import { getOrCreateDirectThread } from "@/lib/messages/threads";
 import {
   channelMemberIds,
@@ -217,6 +218,27 @@ export async function sendMessage(
     senderName: c.name,
     body,
   });
+
+  // PostHog: mention_sent (channel engagement). One event per mention TYPE
+  // present in the message — @channel broadcasts and @user pings are distinct
+  // signals for the channels analysis.
+  const groups = c.companyId ? { company: c.companyId } : undefined;
+  if (hasChannelMention(body)) {
+    await captureServer(
+      "mention_sent",
+      { mention_type: "@channel", channel_id: threadId },
+      c.userId,
+      groups,
+    );
+  }
+  if (extractMentionIds(body).length > 0) {
+    await captureServer(
+      "mention_sent",
+      { mention_type: "@user", channel_id: threadId },
+      c.userId,
+      groups,
+    );
+  }
 
   revalidatePath("/app/messages");
   return { ok: true, messageId: created.id, createdAt: created.createdAt };
@@ -739,6 +761,17 @@ export async function joinChannel(
     channel.id,
     `${firstName(c.name)} joined the channel`,
   );
+  await captureServer(
+    "channel_joined",
+    {
+      channel_id: channel.id,
+      // Guarded above: only public channels are self-serve joinable.
+      channel_type: "public",
+      source: "browse",
+    },
+    c.userId,
+    c.companyId ? { company: c.companyId } : undefined,
+  );
   revalidatePath("/app/messages");
   return { ok: true };
 }
@@ -896,6 +929,17 @@ export async function addChannelMembers(
     resource_id: channel.id,
     metadata: { added: toAdd.map((m) => m.id) } as Record<string, Json>,
   });
+  // PostHog: channel_joined via invite — one per added member (their identity).
+  const channelType = channel.visibility === "private" ? "private" : "public";
+  const groups = c.companyId ? { company: c.companyId } : undefined;
+  for (const m of toAdd) {
+    await captureServer(
+      "channel_joined",
+      { channel_id: channel.id, channel_type: channelType, source: "invite" },
+      m.id,
+      groups,
+    );
+  }
   revalidatePath("/app/messages");
   return { ok: true };
 }

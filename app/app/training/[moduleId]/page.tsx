@@ -11,6 +11,7 @@ import { getModuleContentUrl } from "@/lib/storage/index";
 import { EmptyState } from "@/components/shared/empty-state";
 import { ModuleContentRenderer } from "@/components/training/module-content-renderer";
 import { ModuleFooterNav } from "@/components/training/module-footer-nav";
+import { PlaceholderScan } from "@/components/posthog/placeholder-scan";
 
 export const metadata: Metadata = { title: "Training · TeamApp" };
 
@@ -109,6 +110,12 @@ export default async function ModuleDetailPage({
       <article className="max-w-3xl">
         <ModuleContentRenderer blocks={blocks} assetUrls={assetUrls} />
       </article>
+      {/* Paranoia bug-catcher (E10): flags authored placeholder text leaking
+          into published modules. Scans title + description + block content. */}
+      <PlaceholderScan
+        location={`training_module:${module.id}`}
+        text={`${module.title}\n${module.description ?? ""}\n${JSON.stringify(blocks)}`}
+      />
 
       <ModuleFooterNav
         moduleId={module.id}

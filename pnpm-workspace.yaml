@@ -1,5 +1,9 @@
 allowBuilds:
+  # core-js / protobufjs arrive via posthog-node (Phase 15). Neither postinstall
+  # build is needed at runtime, so don't run them.
+  core-js: false
   esbuild: true
+  protobufjs: false
   sharp: true
   unrs-resolver: true
 onlyBuiltDependencies:

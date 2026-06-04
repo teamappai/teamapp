@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
+import { PostHogProvider } from "@/components/posthog-provider";
 import {
   SITE_NAME,
   SITE_URL,
@@ -73,8 +74,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {/* PostHog analytics provider goes here (wired up in Phase 15). */}
-        {children}
+        <PostHogProvider>{children}</PostHogProvider>
         <Toaster />
         <script
           type="application/ld+json"

@@ -4,6 +4,7 @@ import { getSessionProfile } from "@/lib/auth/profile";
 import { canCreateDeals } from "@/lib/deals/access";
 import { BUCKETS } from "@/lib/storage";
 import { extractContract, ExtractionError } from "@/lib/ai";
+import { captureServer } from "@/lib/posthog/server";
 
 // PDF→PNG rasterization uses the native @napi-rs/canvas binding + pdfjs, which
 // require the Node.js runtime (not Edge). 300-DPI rendering + vision can take a
@@ -123,6 +124,25 @@ export async function POST(request: Request) {
         insErr.message,
       );
     }
+
+    // PostHog: deal_ai_extraction_completed (SR-1/SR-2 — AI accuracy signal).
+    // Corrections happen later in the form (out of scope this phase), so the
+    // server reports 0 corrected at extraction time.
+    const fieldsExtracted = Object.values(result.fields).filter(
+      (v) => v !== null && v !== undefined && v !== "",
+    ).length;
+    await captureServer(
+      "deal_ai_extraction_completed",
+      {
+        fields_extracted_count: fieldsExtracted,
+        fields_corrected_count: 0,
+        file_count: 1,
+      },
+      session.user.id,
+      session.profile.company_id
+        ? { company: session.profile.company_id }
+        : undefined,
+    );
 
     return NextResponse.json({
       fields: result.fields,

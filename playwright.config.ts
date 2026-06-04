@@ -5,9 +5,17 @@ import { defineConfig, devices } from "@playwright/test";
  * (1440×900) and iPhone SE (375×667) — so the mobile pass is regression-tested
  * on the same critical paths as desktop. The dev server is started once and
  * reused locally; CI always starts a fresh one.
+ *
+ * PostHog (Phase 15): specs import `{ test, expect }` from
+ * `tests/helpers/fixtures.ts`, whose `page` fixture aborts all `*.i.posthog.com`
+ * requests so e2e runs never emit analytics events. (Playwright has no
+ * config-level request routing, so this lives in the shared base test.)
  */
 export default defineConfig({
   testDir: "./tests",
+  // Playwright's default testMatch also catches *.test.ts — restrict it to
+  // *.spec.ts so the vitest suite under tests/posthog/ isn't run here.
+  testMatch: "**/*.spec.ts",
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,

@@ -12,6 +12,8 @@ import {
 } from "@/lib/auth/impersonation";
 import { AppShell } from "@/components/layout/app-shell";
 import { ImpersonationBanner } from "@/components/admin/impersonation-banner";
+import { Identify } from "@/components/posthog/identify";
+import { buildCompanyGroup } from "@/lib/posthog/company";
 import type { SidebarData } from "@/components/layout/sidebar-content";
 import type { HeaderIdentity } from "@/components/layout/header";
 import type { NotificationItem } from "@/components/layout/notification-bell";
@@ -110,8 +112,28 @@ export default async function AppLayout({
     verifyValue((await cookies()).get(IMPERSONATION_ADMIN_ID_COOKIE)?.value) !==
     null;
 
+  // PostHog identify (hydration path): re-identifies on a refreshed session
+  // where the login action never ran. Skipped while impersonating so a
+  // super_admin acting-as a user doesn't overwrite their own analytics identity.
+  const companyGroup =
+    !impersonating && profile.company_id
+      ? await buildCompanyGroup(notifSupabase, profile.company_id)
+      : null;
+
   return (
     <>
+      {!impersonating ? (
+        <Identify
+          user={{
+            id: profile.id,
+            email: profile.email,
+            role,
+            company_id: profile.company_id,
+            created_at: profile.created_at,
+          }}
+          company={companyGroup}
+        />
+      ) : null}
       {impersonating ? (
         <ImpersonationBanner name={profile.full_name ?? profile.email} />
       ) : null}

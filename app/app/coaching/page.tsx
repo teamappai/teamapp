@@ -28,6 +28,7 @@ import { ActivityHeatmap } from "@/components/coaching/activity-heatmap";
 import { Leaderboard } from "@/components/coaching/leaderboard";
 import { CoachingLog } from "@/components/coaching/coaching-log";
 import { AgentGoals } from "@/components/coaching/agent-goals";
+import { TrackOnMount } from "@/components/posthog/track-on-mount";
 
 export const metadata: Metadata = { title: "Coaching · TeamApp" };
 
@@ -121,11 +122,17 @@ export default async function CoachingPage({
   }));
 
   const header = (
-    <PageHeader
-      title={title}
-      description="Activity, conversion, and goals across your team."
-      dateRange={<DateRangeSelect range={range} />}
-    />
+    <>
+      <TrackOnMount
+        event="coaching_dashboard_viewed"
+        properties={{ role, date_range_filter: sp.range ?? null }}
+      />
+      <PageHeader
+        title={title}
+        description="Activity, conversion, and goals across your team."
+        dateRange={<DateRangeSelect range={range} />}
+      />
+    </>
   );
 
   const kpiGrid = (

@@ -35,6 +35,9 @@ export function MarkdownMessage({
 
   return (
     <div
+      // Session-replay PII masking (Phase 15 §F, Decision 8): message bodies may
+      // contain client names/numbers — mask the rendered text in recordings.
+      data-ph-mask
       className={cn(
         "text-sm leading-relaxed break-words",
         "[&_p]:my-0 [&_p+p]:mt-2",

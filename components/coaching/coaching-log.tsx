@@ -155,7 +155,9 @@ export function CoachingLog({
                           </Button>
                         ) : null}
                       </div>
-                      <p className="mt-1.5 whitespace-pre-wrap">{e.body}</p>
+                      <p data-ph-mask className="mt-1.5 whitespace-pre-wrap">
+                        {e.body}
+                      </p>
                       {repliesEnabled ? (
                         <div className="mt-2">
                           <Button

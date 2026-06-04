@@ -10,9 +10,11 @@ export default defineConfig({
     alias: { "@": resolve(__dirname, ".") },
   },
   test: {
-    // Unit tests are co-located as *.test.ts. Playwright E2E specs live in
-    // tests/ as *.spec.ts — keep vitest from picking those up.
+    // Unit tests are co-located as *.test.ts (plus the vitest suite under
+    // tests/posthog/). Playwright E2E specs live in tests/ as *.spec.ts — the
+    // include pattern already skips those; we also exclude them explicitly so a
+    // stray *.test.ts helper in a Playwright dir can't leak in.
     include: ["**/*.test.{ts,tsx}"],
-    exclude: ["node_modules/**", "tests/**", ".next/**"],
+    exclude: ["node_modules/**", "tests/**/*.spec.ts", ".next/**"],
   },
 });

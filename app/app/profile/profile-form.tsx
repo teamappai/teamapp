@@ -135,7 +135,11 @@ export function ProfileForm({
                   {licenseRequired(role) ? null : " (optional)"}
                 </FormLabel>
                 <FormControl>
-                  <Input placeholder="DRE #01234567" {...field} />
+                  <Input
+                    placeholder="DRE #01234567"
+                    data-ph-no-capture
+                    {...field}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>

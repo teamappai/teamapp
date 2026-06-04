@@ -15,6 +15,7 @@ import {
 } from "@/lib/validations/request";
 import type { UserRole } from "@/lib/constants/roles";
 import type { Database, Json } from "@/types/supabase";
+import { captureServer } from "@/lib/posthog/server";
 
 export type RequestActionResult<T = object> =
   | ({ ok: true } & T)
@@ -142,6 +143,20 @@ export async function createRequest(
     })),
   );
 
+  await captureServer(
+    "request_created",
+    {
+      request_type: type.name,
+      assigned_to_role: data.assignedToRole ?? null,
+      // Attachments are uploaded after creation (recordRequestFile), so a brand
+      // new request never has them yet.
+      has_attachments: false,
+      has_due_date: data.dueDate != null,
+    },
+    session.user.id,
+    { company: companyId },
+  );
+
   revalidatePath("/app/requests");
   return { ok: true, requestId: created.id };
 }
@@ -257,6 +272,43 @@ export async function changeRequestStatus(
         payload: { request_id: requestId, request_title: req.title },
       },
     ]);
+  }
+
+  // ── PostHog: request_status_changed (+ request_completed on close) ──────────
+  const groups = { company: req.company_id };
+  await captureServer(
+    "request_status_changed",
+    { request_id: requestId, from_status: from, to_status: to },
+    session.user.id,
+    groups,
+  );
+  if (to === "completed") {
+    const { data: meta } = await supabase
+      .from("requests")
+      .select("created_at, request_types(name)")
+      .eq("id", requestId)
+      .maybeSingle();
+    const createdAt = meta?.created_at ? Date.parse(meta.created_at) : null;
+    const timeOpenHours =
+      createdAt !== null ? (Date.now() - createdAt) / 3_600_000 : null;
+    // Supabase types the embedded relation as an array; take the first row.
+    const rt = meta?.request_types as
+      | { name: string }
+      | { name: string }[]
+      | null
+      | undefined;
+    const requestTypeName =
+      (Array.isArray(rt) ? rt[0]?.name : rt?.name) ?? "unknown";
+    await captureServer(
+      "request_completed",
+      {
+        request_type: requestTypeName,
+        time_open_hours:
+          timeOpenHours !== null ? Math.round(timeOpenHours * 10) / 10 : null,
+      },
+      session.user.id,
+      groups,
+    );
   }
 
   revalidatePath(`/app/requests/${requestId}`);
