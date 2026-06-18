@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
@@ -17,22 +17,52 @@ import type { Database } from "../../types/supabase";
  * closed.
  */
 
-// Load .env.local into process.env (the Playwright runner doesn't do this).
-for (const line of readFileSync(
-  resolve(process.cwd(), ".env.local"),
-  "utf8",
-).split("\n")) {
-  const t = line.trim();
-  if (!t || t.startsWith("#")) continue;
-  const i = t.indexOf("=");
-  if (i > 0 && !(t.slice(0, i).trim() in process.env)) {
-    process.env[t.slice(0, i).trim()] = t.slice(i + 1).trim();
+/**
+ * Resolve Supabase credentials. CI provides them as environment variables (the
+ * workflow maps the STAGING_* secrets onto these standard names), so process.env
+ * is the source of truth. `.env.local` is only a local-dev convenience: we read
+ * it to fill any var still missing, and only if the file actually exists — a
+ * missing file must never throw (that was the original CI failure: ENOENT).
+ */
+function loadEnvLocalFallback(): void {
+  const path = resolve(process.cwd(), ".env.local");
+  if (!existsSync(path)) return;
+  let contents: string;
+  try {
+    contents = readFileSync(path, "utf8");
+  } catch {
+    // Unreadable for any reason — env vars (if present) still win below.
+    return;
+  }
+  for (const line of contents.split("\n")) {
+    const t = line.trim();
+    if (!t || t.startsWith("#")) continue;
+    const i = t.indexOf("=");
+    if (i > 0 && !(t.slice(0, i).trim() in process.env)) {
+      process.env[t.slice(0, i).trim()] = t.slice(i + 1).trim();
+    }
   }
 }
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+loadEnvLocalFallback();
+
+/** Read a required credential, failing with a clear, named error if absent. */
+function requireEnv(name: string): string {
+  const value = process.env[name];
+  if (!value) {
+    throw new Error(
+      `Missing required env var "${name}". In CI it is mapped from the ` +
+        `STAGING_* GitHub secret; locally set it in .env.local. ` +
+        `Needed: NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, ` +
+        `SUPABASE_SERVICE_ROLE_KEY.`,
+    );
+  }
+  return value;
+}
+
+const SUPABASE_URL = requireEnv("NEXT_PUBLIC_SUPABASE_URL");
+const ANON_KEY = requireEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY");
+const SERVICE_KEY = requireEnv("SUPABASE_SERVICE_ROLE_KEY");
 
 // A unique marker so we can assert it never leaks into any response/page.
 const RUN = `${Date.now()}`;
