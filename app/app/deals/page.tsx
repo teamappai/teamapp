@@ -105,7 +105,7 @@ export default async function DealsPage() {
         action={
           canCreateDeals(role) ? (
             <Button asChild>
-              <Link href="/app/deals/new">+ Add New Deal</Link>
+              <Link href="/app/deals/new">+ New Deal</Link>
             </Button>
           ) : undefined
         }

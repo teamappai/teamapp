@@ -15,6 +15,7 @@ import {
   type ActivityMetricKey,
 } from "@/lib/constants/activity-metrics";
 import { PageHeader } from "@/components/shared/page-header";
+import { formatDate } from "@/lib/utils/format";
 import { TrackOnMount } from "@/components/posthog/track-on-mount";
 import {
   ActivityLogForm,
@@ -36,9 +37,7 @@ function pickValues(row: Record<string, unknown>): MetricValues {
 }
 
 function weekdayLabel(iso: string): string {
-  return new Date(`${iso}T00:00:00`).toLocaleDateString("en-US", {
-    weekday: "short",
-  });
+  return formatDate(iso, "weekday");
 }
 
 export default async function ActivityLogPage() {

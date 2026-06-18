@@ -46,7 +46,7 @@ export async function AgentDashboard({
     <div className="space-y-6">
       <QuickActions
         actions={[
-          { label: "+ Submit a deal", href: "/app/deals/new", primary: true },
+          { label: "+ New Deal", href: "/app/deals/new", primary: true },
           { label: "Log today's activity", href: "/app/activity-log" },
           { label: "View my coaching", href: "/app/coaching" },
         ]}

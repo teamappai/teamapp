@@ -85,6 +85,76 @@ export function findPlaceholders(blocks: ContentBlock[]): string[] {
   return [...found];
 }
 
+// ── banned content at publish time (CR-2) ─────────────────────────────────────
+/**
+ * Placeholder / test / debug values that must never reach a customer-visible
+ * surface (audit CR-2). Two match modes:
+ *
+ *  - substring: rejected anywhere in the text (case-insensitive). Word-boundary
+ *    anchored for plain words so we don't flag legitimate text that happens to
+ *    contain the letters (e.g. "method" must not trip "todo").
+ *  - standalone: rejected only when it IS the whole (trimmed) value — so
+ *    "1234 Main St" is a valid title but a title of just "1234" is not.
+ *
+ * `label` is the human-facing spelling shown back to the author.
+ */
+const BANNED_SUBSTRINGS: { test: RegExp; label: string }[] = [
+  { test: /\btodo\b/i, label: "TODO" },
+  { test: /\btbd\b/i, label: "TBD" },
+  { test: /\{\{/, label: "{{" },
+  { test: /\}\}/, label: "}}" },
+  { test: /lorem ipsum/i, label: "Lorem ipsum" },
+  { test: /\btest123\b/i, label: "test123" },
+  { test: /alm content goes here/i, label: "ALM Content goes here" },
+  { test: /\bacccepting\b/i, label: "Acccepting" },
+  { test: /all companies/i, label: "All Companies" },
+  { test: /all types/i, label: "All Types" },
+  { test: /xyz test/i, label: "XYZ Test" },
+];
+
+const BANNED_STANDALONE: { value: string; label: string }[] = [
+  { value: "1234", label: "1234" },
+  { value: "demo", label: "Demo" },
+  { value: "abc", label: "abc" },
+];
+
+/**
+ * Returns the banned values found in a single raw string (HTML stripped). Empty
+ * = clean. Used as the publish-time gate for customer-visible user-generated
+ * content (module content, section descriptions, request/deal type names).
+ */
+export function findBannedContent(raw: string): string[] {
+  const found = new Set<string>();
+  const text = stripTags(raw);
+  for (const { test, label } of BANNED_SUBSTRINGS) {
+    if (test.test(text)) found.add(label);
+  }
+  const trimmed = text.trim().toLowerCase();
+  for (const { value, label } of BANNED_STANDALONE) {
+    if (trimmed === value) found.add(label);
+  }
+  return [...found];
+}
+
+/** Scan every text-bearing block for banned content (publish gate, CR-2). */
+export function findBannedContentInBlocks(blocks: ContentBlock[]): string[] {
+  const found = new Set<string>();
+  for (const block of blocks) {
+    for (const raw of blockText(block)) {
+      for (const hit of findBannedContent(raw)) found.add(hit);
+    }
+  }
+  return [...found];
+}
+
+/**
+ * Build the inline error shown to the author when a save is blocked by banned
+ * content. Centralized so every save site phrases the rejection identically.
+ */
+export function bannedContentError(found: string[]): string {
+  return `Remove placeholder or test content before saving: ${found.join(", ")}. Replace it with the real value.`;
+}
+
 // ── emoji in titles (F-046) ───────────────────────────────────────────────────
 // Pictographic emoji (excludes ordinary punctuation/symbols like ™ via the
 // Extended_Pictographic property). Titles must read as plain professional text.
