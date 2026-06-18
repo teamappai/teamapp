@@ -124,7 +124,7 @@ const NAV_BY_ROLE: Record<UserRole, NavItem[]> = {
 };
 
 const CTA_BY_ROLE: Partial<Record<UserRole, SidebarCta>> = {
-  agent: { href: "/app/deals/new", label: "Submit a deal", icon: "deal" },
+  agent: { href: "/app/deals/new", label: "New Deal", icon: "deal" },
   team_lead: {
     href: "/app/users?invite=1",
     label: "Invite users",

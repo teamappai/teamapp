@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Check } from "lucide-react";
 
 import { cn } from "@/lib/utils/index";
+import { formatDate } from "@/lib/utils/format";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -328,7 +329,7 @@ function ChangePlanDialog({
             {isDowngrade
               ? `Scheduled for the end of your current billing period${
                   data.renewalDate
-                    ? ` (${new Date(data.renewalDate).toLocaleDateString()})`
+                    ? ` (${formatDate(data.renewalDate, "short")})`
                     : ""
                 }. You keep your current features until then.`
               : "Confirm your plan, billing cycle, and seat count. Charges are prorated."}

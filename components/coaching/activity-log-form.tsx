@@ -30,6 +30,7 @@ import {
   WeeklyActivityChart,
   type WeeklyPoint,
 } from "@/components/coaching/weekly-activity-chart";
+import { formatDate } from "@/lib/utils/format";
 
 export type MetricValues = Record<ActivityMetricKey, number>;
 export type DayLog = { values: MetricValues; isOffDay: boolean };
@@ -339,10 +340,7 @@ const GROUP_LABEL: Record<ActivityGroupKey, string> = {
 
 /** Read-only summary of what was logged yesterday, for at-a-glance reference. */
 function YesterdayCard({ yesterday }: { yesterday: YesterdayReference }) {
-  const niceDate = new Date(`${yesterday.date}T00:00:00`).toLocaleDateString(
-    "en-US",
-    { weekday: "long", month: "short", day: "numeric" },
-  );
+  const niceDate = formatDate(yesterday.date, "weekday-date");
 
   return (
     <Card className="gap-0 py-4">

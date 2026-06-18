@@ -4,6 +4,7 @@ import * as React from "react";
 import { Check, Sparkles } from "lucide-react";
 
 import { cn } from "@/lib/utils/index";
+import { formatNumber } from "@/lib/utils/format";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -96,7 +97,7 @@ export function ConfirmedPill() {
 // ── currency input (whole-dollar entry, stored as cents) ──────────────────────
 function centsToText(cents: number | null): string {
   if (cents == null) return "";
-  return Math.round(cents / 100).toLocaleString("en-US");
+  return formatNumber(Math.round(cents / 100));
 }
 
 export function CurrencyInput({

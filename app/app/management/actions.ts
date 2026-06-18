@@ -51,6 +51,9 @@ import {
   hasEmoji,
   findMisspellings,
   findContentMisspellings,
+  findBannedContent,
+  findBannedContentInBlocks,
+  bannedContentError,
 } from "@/lib/team/content";
 
 export type ActionResult =
@@ -74,6 +77,17 @@ export async function saveSection(
 
   if (hasEmoji(parsed.data.title)) {
     return { ok: false, error: "Remove emojis from the title (F-046)." };
+  }
+
+  // CR-2: block placeholder / test content in the title and description.
+  const banned = [
+    ...new Set([
+      ...findBannedContent(parsed.data.title),
+      ...findBannedContent(parsed.data.description ?? ""),
+    ]),
+  ];
+  if (banned.length) {
+    return { ok: false, error: bannedContentError(banned) };
   }
 
   const placeholders = scanPlaceholders(parsed.data.title);
@@ -146,6 +160,19 @@ export async function saveModule(
 
   // Sanitize stray formatting (F-074), then block placeholders (F-073, CR-2).
   const blocks = sanitizeBlocks(parseBlocks(input.content));
+
+  // CR-2: block placeholder / test content in the title, description, and body.
+  const banned = [
+    ...new Set([
+      ...findBannedContent(parsed.data.title),
+      ...findBannedContent(parsed.data.description ?? ""),
+      ...findBannedContentInBlocks(blocks),
+    ]),
+  ];
+  if (banned.length) {
+    return { ok: false, error: bannedContentError(banned) };
+  }
+
   const placeholders = [
     ...new Set([
       ...scanPlaceholders(parsed.data.title),
@@ -233,6 +260,8 @@ export async function saveDealType(input: {
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid." };
   }
+  const banned = findBannedContent(parsed.data.name);
+  if (banned.length) return { ok: false, error: bannedContentError(banned) };
   const res = input.id
     ? await updateDealType(input.id, parsed.data.name)
     : await createDealType(companyId, parsed.data.name);
@@ -289,6 +318,8 @@ export async function saveRequestType(
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid." };
   }
+  const banned = findBannedContent(parsed.data.name);
+  if (banned.length) return { ok: false, error: bannedContentError(banned) };
   const res = input.id
     ? await updateRequestType(input.id, parsed.data)
     : await createRequestType(companyId, parsed.data);

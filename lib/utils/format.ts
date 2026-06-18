@@ -7,7 +7,13 @@ import { formatDistanceToNow } from "date-fns";
  * code should not reach for ad-hoc `toLocaleDateString` calls.
  */
 
-export type DateFormat = "short" | "long" | "iso" | "relative";
+export type DateFormat =
+  | "short"
+  | "long"
+  | "iso"
+  | "relative"
+  | "weekday"
+  | "weekday-date";
 
 const SHORT = new Intl.DateTimeFormat("en-US", {
   month: "short",
@@ -20,6 +26,17 @@ const LONG = new Intl.DateTimeFormat("en-US", {
   month: "long",
   day: "numeric",
   year: "numeric",
+});
+
+// "Mon" — a bare weekday, for compact day labels (e.g. the activity log).
+const WEEKDAY = new Intl.DateTimeFormat("en-US", { weekday: "short" });
+
+// "Monday, May 10" — weekday + month/day without the year, for at-a-glance
+// "what did I log yesterday" references.
+const WEEKDAY_DATE = new Intl.DateTimeFormat("en-US", {
+  weekday: "long",
+  month: "short",
+  day: "numeric",
 });
 
 /** Coerce input to a Date; returns an invalid Date for unparseable input. */
@@ -63,6 +80,10 @@ export function formatDate(
     }
     case "relative":
       return formatDistanceToNow(date, { addSuffix: true });
+    case "weekday":
+      return WEEKDAY.format(date);
+    case "weekday-date":
+      return WEEKDAY_DATE.format(date);
   }
 }
 

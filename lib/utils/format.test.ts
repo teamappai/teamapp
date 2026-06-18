@@ -12,6 +12,9 @@ describe("formatDate", () => {
   it("short", () => expect(formatDate(d, "short")).toBe("May 10, 2026"));
   it("long", () => expect(formatDate(d, "long")).toBe("Sunday, May 10, 2026"));
   it("iso", () => expect(formatDate(d, "iso")).toBe("2026-05-10"));
+  it("weekday", () => expect(formatDate(d, "weekday")).toBe("Sun"));
+  it("weekday-date", () =>
+    expect(formatDate(d, "weekday-date")).toBe("Sunday, May 10"));
   it("defaults to short", () => expect(formatDate(d)).toBe("May 10, 2026"));
   it("relative is suffixed", () => {
     const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);

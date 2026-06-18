@@ -213,3 +213,67 @@ Backlog only — do **not** implement yet. Phase 8 ships AI contract extraction
   accuracy; set an acceptance threshold.
 - **Production OCR preprocessing** — evaluate AWS Textract or Google Document AI
   as a preprocessing step for higher production accuracy.
+
+## Operations
+
+Day-to-day operational reference for running TeamApp in production (Phase 16+).
+
+### Adding a database migration
+
+1. Create the next numbered SQL file in `db/migrations/` (e.g.
+   `0030_add_widget.sql`). Keep migrations **forward-only** — there are no
+   automatic down-migrations; to undo, write a new compensating migration.
+2. Apply it: `pnpm db:migrate` (runs `supabase db push`; requires the Supabase
+   CLI and a linked project). `supabase/migrations` is a symlink to
+   `db/migrations`, so the CLI picks the files up automatically.
+3. **Always** regenerate types and review the diff: `pnpm db:types`, then check
+   `types/supabase.ts`.
+4. Re-run `pnpm typecheck && pnpm lint && pnpm test` before committing.
+5. Prefer additive, nullable changes; treat destructive column drops/renames as
+   high-risk (they make a clean rollback impossible — see the rollback runbook).
+
+### Resuming work after a pause
+
+The current build state lives in the user's auto-memory
+(`memory/MEMORY.md`) — read it first to see which phase/branch is in flight,
+which migrations are applied to the remote, and what's awaiting verification.
+Then:
+
+1. `git status` / `git branch --show-current` — confirm the working branch
+   (launch work happens on `phase-16-launch`).
+2. `git log --oneline -5` — see what last landed.
+3. `pnpm install` if dependencies may have changed, then
+   `pnpm typecheck && pnpm lint && pnpm test` to confirm a clean baseline before
+   making changes.
+4. Check the migration list against the memory note — a migration may be applied
+   to the remote DB but its branch not yet pushed.
+
+### Where environment variables live
+
+- **`.env.local` — local/dev and CI test values only.** Test-mode Stripe keys
+  (`sk_test_…`), a dev/staging Supabase project, dev PostHog, etc. Never commit
+  it. `.env.local.example` documents every variable the app reads.
+- **Vercel project env — production/live values.** Live Stripe keys
+  (`sk_live_…` / `pk_live_…`) and live price IDs, the production Supabase
+  project, production PostHog, `NEXT_PUBLIC_SENTRY_DSN` + `SENTRY_AUTH_TOKEN`,
+  Resend. Set per-environment (Production vs Preview) in the Vercel dashboard;
+  these are injected at build/deploy time, never checked into the repo.
+- **GitHub Actions secrets — CI only.** The Playwright e2e job runs against the
+  **staging** Supabase project via `STAGING_SUPABASE_URL`,
+  `STAGING_SUPABASE_ANON_KEY`, and `STAGING_SUPABASE_SERVICE_ROLE_KEY` — never
+  production (tests seed and mutate data). See `.github/workflows/ci.yml`.
+- Server-only secrets (service-role key, Stripe secret, price IDs in
+  `lib/billing/env.ts`) must never be imported into client code or prefixed
+  `NEXT_PUBLIC_`.
+
+### Runbooks
+
+- **[`docs/runbooks/rollback.md`](docs/runbooks/rollback.md)** — recover from a
+  bad deploy (< 5 min, Vercel instant rollback), data corruption (< 60 min,
+  Supabase PITR to a separate project), or a full revert to the legacy Bubble app
+  (last resort, within the 14-day cutover window).
+- **[`docs/runbooks/launch-smoke-test.md`](docs/runbooks/launch-smoke-test.md)**
+  — the manual checklist to run against `https://teamapp.ai` right after cutover
+  (marketing, login, deal, activity, message, billing, `/api/health`, a live
+  Stripe checkout, a Resend invitation). The automated counterpart is the
+  Playwright smoke suite in `tests/smoke/`.
