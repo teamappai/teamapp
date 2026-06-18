@@ -37,6 +37,8 @@ import {
   hasEmoji,
   findMisspellings,
   findContentMisspellings,
+  findBannedAuthoredContent,
+  bannedContentError,
 } from "@/lib/team/content";
 
 export type ActionResult =
@@ -132,6 +134,15 @@ export async function savePlaybookSectionAction(
   if (hasEmoji(parsed.data.title)) {
     return { ok: false, error: "Remove emojis from the title." };
   }
+  // CR-2: block placeholder / test content in the title and description before
+  // it can be installed into a company's training_modules.
+  const banned = findBannedAuthoredContent({
+    title: parsed.data.title,
+    description: parsed.data.description,
+  });
+  if (banned.length) {
+    return { ok: false, error: bannedContentError(banned) };
+  }
   const placeholders = scanPlaceholders(parsed.data.title);
   if (placeholders.length) {
     return {
@@ -191,6 +202,18 @@ export async function savePlaybookModuleAction(
 
   // Same content rules as the Phase 7 module editor (F-073/F-074/CR-2/CR-11).
   const blocks = sanitizeBlocks(parseBlocks(input.content));
+
+  // CR-2: block placeholder / test content in the title, description, and body
+  // before it can be deep-copied into a company's training_modules on install.
+  const banned = findBannedAuthoredContent({
+    title: parsed.data.title,
+    description: parsed.data.description,
+    blocks,
+  });
+  if (banned.length) {
+    return { ok: false, error: bannedContentError(banned) };
+  }
+
   const placeholders = [
     ...new Set([
       ...scanPlaceholders(parsed.data.title),

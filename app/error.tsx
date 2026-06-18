@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect } from "react";
 import { TriangleAlert } from "lucide-react";
+import * as Sentry from "@sentry/nextjs";
 
 import { Button } from "@/components/ui/button";
 
@@ -20,8 +21,8 @@ export default function Error({
   reset: () => void;
 }) {
   useEffect(() => {
-    // Surface the error to the console for diagnostics; production wiring to an
-    // error tracker can hook in here later.
+    // Report to Sentry (PII is scrubbed in beforeSend) and log for local dev.
+    Sentry.captureException(error);
     console.error(error);
   }, [error]);
 

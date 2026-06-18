@@ -148,6 +148,29 @@ export function findBannedContentInBlocks(blocks: ContentBlock[]): string[] {
 }
 
 /**
+ * Combined CR-2 gate for an authored unit of content (a training/playbook
+ * module or section): scans the title, optional description, and optional body
+ * blocks, returning the deduped list of banned values found. Empty = clean.
+ */
+export function findBannedAuthoredContent(parts: {
+  title?: string;
+  description?: string | null;
+  blocks?: ContentBlock[];
+}): string[] {
+  const found = new Set<string>();
+  if (parts.title) {
+    for (const hit of findBannedContent(parts.title)) found.add(hit);
+  }
+  if (parts.description) {
+    for (const hit of findBannedContent(parts.description)) found.add(hit);
+  }
+  if (parts.blocks) {
+    for (const hit of findBannedContentInBlocks(parts.blocks)) found.add(hit);
+  }
+  return [...found];
+}
+
+/**
  * Build the inline error shown to the author when a save is blocked by banned
  * content. Centralized so every save site phrases the rejection identically.
  */

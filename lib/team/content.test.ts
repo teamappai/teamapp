@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   findBannedContent,
   findBannedContentInBlocks,
+  findBannedAuthoredContent,
   bannedContentError,
   type ContentBlock,
 } from "./content";
@@ -90,6 +91,67 @@ describe("findBannedContentInBlocks (CR-2)", () => {
       { type: "paragraph", text: "A guide to comparative market analysis." },
     ];
     expect(findBannedContentInBlocks(blocks)).toEqual([]);
+  });
+});
+
+// CR-2 gap close (Phase 16B): the combined gate used by both the team module
+// editor and the super-admin playbook authoring path (playbook content is
+// deep-copied into a company's training_modules on install, so it must be held
+// to the same standard).
+describe("findBannedAuthoredContent (CR-2)", () => {
+  it("catches a banned value in the title", () => {
+    expect(
+      findBannedAuthoredContent({ title: "XYZ Test", description: "" }),
+    ).toContain("XYZ Test");
+  });
+
+  it("catches a banned value in the description", () => {
+    expect(
+      findBannedAuthoredContent({
+        title: "Listing checklist",
+        description: "Lorem ipsum dolor",
+      }),
+    ).toContain("Lorem ipsum");
+  });
+
+  it("catches a banned value in the body blocks", () => {
+    const blocks: ContentBlock[] = [
+      { type: "paragraph", text: "ALM Content goes here" },
+    ];
+    expect(findBannedAuthoredContent({ title: "Pricing", blocks })).toContain(
+      "ALM Content goes here",
+    );
+  });
+
+  it("dedupes the same value found in multiple positions", () => {
+    const blocks: ContentBlock[] = [{ type: "paragraph", text: "TODO" }];
+    expect(
+      findBannedAuthoredContent({
+        title: "TODO",
+        description: "TODO",
+        blocks,
+      }),
+    ).toEqual(["TODO"]);
+  });
+
+  it("returns clean for well-formed authored content", () => {
+    const blocks: ContentBlock[] = [
+      { type: "heading", level: 2, text: "Pricing your home" },
+      { type: "paragraph", text: "A guide to comparative market analysis." },
+    ];
+    expect(
+      findBannedAuthoredContent({
+        title: "Pricing your home",
+        description: "How to run a CMA.",
+        blocks,
+      }),
+    ).toEqual([]);
+  });
+
+  it("handles a null description (optional field)", () => {
+    expect(
+      findBannedAuthoredContent({ title: "Open houses", description: null }),
+    ).toEqual([]);
   });
 });
 

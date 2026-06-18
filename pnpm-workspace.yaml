@@ -1,6 +1,9 @@
 allowBuilds:
   # core-js / protobufjs arrive via posthog-node (Phase 15). Neither postinstall
   # build is needed at runtime, so don't run them.
+  # @sentry/cli's native binary IS needed at build time for source-map upload
+  # (Phase 16B, Decision 1).
+  "@sentry/cli": true
   core-js: false
   esbuild: true
   protobufjs: false
@@ -10,3 +13,4 @@ onlyBuiltDependencies:
   - sharp
   - unrs-resolver
   - esbuild
+  - "@sentry/cli"
