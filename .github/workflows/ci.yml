@@ -55,9 +55,12 @@ jobs:
   e2e:
     name: playwright (desktop + mobile)
     runs-on: ubuntu-latest
-    # Requires repo secrets pointing at a seeded Supabase project (the same seed
-    # accounts tests/helpers/auth.ts logs in as). Skips cleanly on forks/PRs
-    # without secrets so it never blocks unrelated contributors.
+    # Runs against the dedicated STAGING Supabase project — NEVER production.
+    # The suite seeds and mutates data (deals, activity logs, the cross-company
+    # RLS probe), so it must point at a throwaway project that mirrors the seed
+    # accounts in tests/helpers/auth.ts. Credentials come from clearly-named
+    # STAGING_* repo secrets. Skips cleanly on forks/PRs without secrets so it
+    # never blocks unrelated contributors.
     if: ${{ github.event_name == 'push' || github.repository == github.event.pull_request.head.repo.full_name }}
 
     steps:
@@ -85,9 +88,12 @@ jobs:
         run: pnpm test:e2e
         env:
           CI: "true"
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          # STAGING Supabase only — the app reads the standard NEXT_PUBLIC_*/
+          # service-role names, but in CI they are fed from the STAGING_* secrets
+          # so a test run can never seed or mutate the production database.
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.STAGING_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
           NEXT_PUBLIC_APP_URL: http://localhost:3000
 
       - name: Upload Playwright report
