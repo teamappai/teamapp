@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { toast } from "sonner";
 import { MessageSquarePlus, Trash2 } from "lucide-react";
 
@@ -134,8 +135,15 @@ export function CoachingLog({
                           <span className="text-foreground font-medium">
                             {e.coachName}
                           </span>{" "}
-                          → {e.agentName} · {formatDate(e.occurred_at, "short")}{" "}
-                          · {timeOf(e.occurred_at)}
+                          →{" "}
+                          <Link
+                            href={`/app/users/${e.agentUserId}?tab=coaching`}
+                            className="hover:text-foreground font-medium hover:underline"
+                          >
+                            {e.agentName}
+                          </Link>{" "}
+                          · {formatDate(e.occurred_at, "short")} ·{" "}
+                          {timeOf(e.occurred_at)}
                           {e.is_test ? (
                             <Badge variant="outline" className="ml-2">
                               test

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { MoreHorizontal, UserPlus, Users as UsersIcon } from "lucide-react";
@@ -93,7 +94,16 @@ function UserRowItem({
             size="sm"
           />
           <span>
-            <span className="block font-medium">{row.fullName ?? "—"}</span>
+            {row.kind === "user" ? (
+              <Link
+                href={`/app/users/${row.id}`}
+                className="block font-medium hover:underline"
+              >
+                {row.fullName ?? "—"}
+              </Link>
+            ) : (
+              <span className="block font-medium">{row.fullName ?? "—"}</span>
+            )}
             <span className="text-muted-foreground block text-xs">
               {row.email}
             </span>

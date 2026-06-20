@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import {
   ArrowDown,
   ArrowUp,
@@ -118,7 +119,12 @@ export function Leaderboard({
                   size="sm"
                 />
                 <div className="min-w-0 flex-1">
-                  <div className="truncate font-medium">{row.name}</div>
+                  <Link
+                    href={`/app/users/${row.userId}`}
+                    className="block truncate font-medium hover:underline"
+                  >
+                    {row.name}
+                  </Link>
                   {row.goalLabel ? (
                     <div className="text-muted-foreground truncate text-xs">
                       Goal: {row.goalLabel}
@@ -240,7 +246,12 @@ export function Leaderboard({
                         size="sm"
                       />
                       <div className="min-w-0">
-                        <div className="truncate font-medium">{row.name}</div>
+                        <Link
+                          href={`/app/users/${row.userId}`}
+                          className="block truncate font-medium hover:underline"
+                        >
+                          {row.name}
+                        </Link>
                         {row.goalLabel ? (
                           <div className="text-muted-foreground truncate text-xs">
                             Goal: {row.goalLabel}
