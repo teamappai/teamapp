@@ -1,7 +1,6 @@
 import "server-only";
 import OpenAI from "openai";
-import { buildDocumentPart, pngImagePart } from "./content";
-import { renderPdfToPngs, MAX_PDF_PAGES } from "./pdf";
+import { buildDocumentPart } from "./content";
 import {
   ExtractionError,
   LOW_CONFIDENCE_THRESHOLD,
@@ -185,10 +184,12 @@ export class OpenAIProvider implements AIProvider {
     }
 
     // Build the document content parts.
-    //  - images  → a single high-detail image_url part
-    //  - PDFs     → rasterized to one high-DPI PNG per page (flattened e-signed
-    //               contracts have no text layer; PNG vision is the reliable
-    //               input). PDFs ALWAYS go through PNG conversion now.
+    //  - images → a single high-detail image_url part
+    //  - PDFs    → sent directly to OpenAI as a base64 `file` part. OpenAI
+    //              extracts both the text layer AND a rendered image of every
+    //              page server-side, so this handles the flattened, text-layer-
+    //              less e-signed contracts agents upload — with no local
+    //              rasterization or native binaries (Vercel-serverless safe).
     let documentParts: OpenAI.Chat.Completions.ChatCompletionContentPart[];
     let logSuffix: string;
 
@@ -205,30 +206,16 @@ export class OpenAIProvider implements AIProvider {
         `mime:${mimeType} source-bytes:${fileBuffer.byteLength} pages:1 ` +
         `converted-png-bytes:0 content:[text, image_url x 1] (base64 redacted)`;
     } else if (mimeType === "application/pdf") {
-      let rendered;
-      try {
-        rendered = await renderPdfToPngs(fileBuffer);
-      } catch (convErr) {
-        console.error(
-          "[ai] pdf->png conversion failed:",
-          convErr instanceof Error ? convErr.message : convErr,
-        );
-        throw new ExtractionError(
-          "Couldn't process this PDF. Please try a different file or enter details manually.",
-          "pdf_conversion_failed",
-        );
-      }
-      if (rendered.truncated) {
-        console.warn(
-          `[ai] PDF has ${rendered.totalPages} pages; only the first ${MAX_PDF_PAGES} were sent for extraction.`,
-        );
-      }
-      documentParts = rendered.pages.map((p) => pngImagePart(p));
-      const pngBytes = rendered.pages.reduce((n, p) => n + p.byteLength, 0);
+      const dataUrl = `data:application/pdf;base64,${fileBuffer.toString("base64")}`;
+      documentParts = [
+        {
+          type: "file",
+          file: { filename: "contract.pdf", file_data: dataUrl },
+        },
+      ];
       logSuffix =
         `mime:application/pdf source-bytes:${fileBuffer.byteLength} ` +
-        `pages:${rendered.pages.length} converted-png-bytes:${pngBytes} ` +
-        `content:[text, image_url x ${documentParts.length}] (base64 redacted)`;
+        `content:[text, file x 1] (base64 redacted)`;
     } else {
       throw new ExtractionError(
         "Unsupported file type. Upload a PDF or image of the contract.",

@@ -3,16 +3,6 @@ import { withSentryConfig } from "@sentry/nextjs";
 import { securityHeaders } from "./lib/security/headers";
 
 const nextConfig: NextConfig = {
-  // pdf-to-png-converter pulls in pdfjs-dist + the native @napi-rs/canvas
-  // binding (used server-side to rasterize contract PDFs for AI extraction).
-  // Mark them external so Next/Turbopack don't try to bundle the .node binary
-  // or the pdfjs worker — they're required from node_modules at runtime.
-  serverExternalPackages: [
-    "pdf-to-png-converter",
-    "pdfjs-dist",
-    "@napi-rs/canvas",
-  ],
-
   // HTTP security headers (Phase 16B, Decision 6). CSP is report-only.
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];

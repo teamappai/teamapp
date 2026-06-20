@@ -6,8 +6,9 @@ import { BUCKETS } from "@/lib/storage";
 import { extractContract, ExtractionError } from "@/lib/ai";
 import { captureServer } from "@/lib/posthog/server";
 
-// PDF→PNG rasterization uses the native @napi-rs/canvas binding + pdfjs, which
-// require the Node.js runtime (not Edge). 300-DPI rendering + vision can take a
+// Extraction reads the upload into a Node Buffer and calls the OpenAI SDK
+// (PDFs are passed straight through as a base64 file part), so it needs the
+// Node.js runtime (not Edge). Vision over a multi-page contract can take a
 // while, so allow up to 60s.
 export const runtime = "nodejs";
 export const maxDuration = 60;
