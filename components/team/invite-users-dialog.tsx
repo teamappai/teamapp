@@ -85,7 +85,7 @@ function SeatLimitPrompt({ info }: { info: SeatLimitInfo }) {
           </Button>
         ) : null}
         <Button asChild size="sm" variant="outline">
-          <Link href="/app/billing">
+          <Link href="/app/billing?tab=plans&dialog=seats">
             <CreditCard className="size-4" />
             Add seats
             {info.perSeatMonthlyCents > 0

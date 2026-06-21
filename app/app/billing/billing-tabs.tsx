@@ -76,8 +76,19 @@ export function BillingTabs({ data }: { data: BillingData }) {
   // Deep-link support: /app/billing?tab=plans opens the Plans tab directly
   // (used by the playbook plan-cap modal's "Upgrade to Pro" CTA).
   const searchParams = useSearchParams();
-  const initialTab = searchParams.get("tab") === "plans" ? "plans" : "overview";
+  // Deep-link support: ?tab=plans opens Plans; ?dialog=seats additionally opens
+  // the seat-management dialog (used by the invite modal's "Add seats" CTA).
+  const wantsSeats = searchParams.get("dialog") === "seats";
+  const initialTab =
+    searchParams.get("tab") === "plans" || wantsSeats ? "plans" : "overview";
   const [tab, setTab] = React.useState(initialTab);
+  const [seatsRequest, setSeatsRequest] = React.useState(wantsSeats ? 1 : 0);
+
+  // Open the seat dialog on the Plans tab from anywhere in the billing surface.
+  function requestAddSeats() {
+    setTab("plans");
+    setSeatsRequest((n) => n + 1);
+  }
 
   return (
     <Tabs value={tab} onValueChange={setTab}>
@@ -88,11 +99,15 @@ export function BillingTabs({ data }: { data: BillingData }) {
       </TabsList>
 
       <TabsContent value="overview">
-        <OverviewTab data={data} onManagePlan={() => setTab("plans")} />
+        <OverviewTab
+          data={data}
+          onManagePlan={() => setTab("plans")}
+          onAddSeats={requestAddSeats}
+        />
       </TabsContent>
 
       <TabsContent value="plans">
-        <PlansTab data={data} />
+        <PlansTab data={data} seatsRequest={seatsRequest} />
       </TabsContent>
 
       <TabsContent value="history">
@@ -105,9 +120,11 @@ export function BillingTabs({ data }: { data: BillingData }) {
 function OverviewTab({
   data,
   onManagePlan,
+  onAddSeats,
 }: {
   data: BillingData;
   onManagePlan: () => void;
+  onAddSeats: () => void;
 }) {
   const router = useRouter();
   const [pending, setPending] = React.useState(false);
@@ -340,7 +357,7 @@ function OverviewTab({
                   You&rsquo;re using {data.seats.used} of {data.seats.total}{" "}
                   seats. Add more before you hit the cap.
                 </span>
-                <Button size="sm" variant="outline" onClick={onManagePlan}>
+                <Button size="sm" variant="outline" onClick={onAddSeats}>
                   Add seats
                 </Button>
               </AlertDescription>

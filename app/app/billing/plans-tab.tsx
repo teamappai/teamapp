@@ -73,9 +73,24 @@ type DialogState = {
   mode: "upgrade" | "downgrade" | "seats";
 } | null;
 
-export function PlansTab({ data }: { data: BillingData }) {
+export function PlansTab({
+  data,
+  seatsRequest = 0,
+}: {
+  data: BillingData;
+  /** Bumped by an external "Add seats" trigger to auto-open the seats dialog. */
+  seatsRequest?: number;
+}) {
   const [cycle, setCycle] = React.useState<BillingCycle>(data.cycle);
   const [dialog, setDialog] = React.useState<DialogState>(null);
+
+  // Open the seat-management dialog when an external surface (the seat-usage
+  // banner, or a deep link from the invite modal) asks for it.
+  React.useEffect(() => {
+    if (seatsRequest > 0) {
+      setDialog({ plan: data.planId, mode: "seats" });
+    }
+  }, [seatsRequest, data.planId]);
 
   return (
     <div className="space-y-6">
@@ -197,7 +212,16 @@ export function PlansTab({ data }: { data: BillingData }) {
                     </Button>
                   )
                 ) : isCurrent ? (
-                  <CurrentChip />
+                  <div className="space-y-2">
+                    <CurrentChip />
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => setDialog({ plan: planId, mode: "seats" })}
+                    >
+                      Add seats
+                    </Button>
+                  </div>
                 ) : rank > currentRank ? (
                   <Button
                     className="w-full"
@@ -254,13 +278,20 @@ function ChangePlanDialog({
 }) {
   const router = useRouter();
   const plan = getPlan(target.plan);
+  const isDowngrade = target.mode === "downgrade";
+  const isSeats = target.mode === "seats";
   const minSeats = Math.max(plan.included_seats, data.seats.used);
   const [seats, setSeats] = React.useState(
-    target.mode === "downgrade" ? plan.included_seats : minSeats,
+    isDowngrade
+      ? plan.included_seats
+      : // Seat management starts from the current total so the obvious move is
+        // to add to what you already have.
+        isSeats
+        ? Math.max(minSeats, data.seats.total)
+        : minSeats,
   );
   const [pending, setPending] = React.useState(false);
 
-  const isDowngrade = target.mode === "downgrade";
   // Base bills per the chosen cycle; extra seats ALWAYS bill monthly (shown as
   // a separate monthly line so customers never see annual seat "sticker shock").
   const baseCents =
@@ -323,7 +354,9 @@ function ChangePlanDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
-            {isDowngrade ? "Downgrade to" : "Upgrade to"} {plan.display_name}
+            {isSeats
+              ? "Manage seats"
+              : `${isDowngrade ? "Downgrade to" : "Upgrade to"} ${plan.display_name}`}
           </DialogTitle>
           <DialogDescription>
             {isDowngrade
@@ -332,7 +365,9 @@ function ChangePlanDialog({
                     ? ` (${formatDate(data.renewalDate, "short")})`
                     : ""
                 }. You keep your current features until then.`
-              : "Confirm your plan, billing cycle, and seat count. Charges are prorated."}
+              : isSeats
+                ? `Adjust the number of seats on your ${plan.display_name} plan. Extra seats are added to your subscription immediately and prorated.`
+                : "Confirm your plan, billing cycle, and seat count. Charges are prorated."}
           </DialogDescription>
         </DialogHeader>
 
@@ -406,7 +441,9 @@ function ChangePlanDialog({
               ? "Working…"
               : isDowngrade
                 ? "Schedule downgrade"
-                : "Confirm upgrade"}
+                : isSeats
+                  ? "Update seats"
+                  : "Confirm upgrade"}
           </Button>
         </DialogFooter>
       </DialogContent>

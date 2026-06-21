@@ -327,6 +327,36 @@ export async function resendInvite(
   return { ok: true };
 }
 
+/**
+ * Revoke a pending invitation, freeing its seat. RLS (user_invitations_write,
+ * can_manage_company) scopes the delete to the caller's company; the
+ * `accepted_at is null` guard ensures only still-pending invites are removed.
+ * The seat frees automatically — getSeatUsage stops counting the row.
+ */
+export async function revokeInvitation(
+  invitationId: string,
+): Promise<ActionResult> {
+  const { profile } = await requireTeamLead();
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("user_invitations")
+    .delete()
+    .eq("id", invitationId)
+    .is("accepted_at", null);
+  if (error) return { ok: false, error: error.message };
+
+  await logAudit({
+    actor_user_id: profile.id,
+    action: "invitation_revoked",
+    resource_type: "user",
+    metadata: { invitation_id: invitationId },
+  });
+
+  revalidatePath("/app/users");
+  return { ok: true };
+}
+
 export async function editUser(input: EditUserInput): Promise<ActionResult> {
   await requireTeamLead();
   const parsed = editUserSchema.safeParse(input);
