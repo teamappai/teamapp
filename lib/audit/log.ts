@@ -15,6 +15,7 @@ export type AuditAction =
   | "company_canceled"
   | "company_restored"
   | "invite_resent"
+  | "invitation_revoked"
   | "invitation_send_failed"
   | "feature_flag_toggled"
   | "feature_flag_companies_updated"

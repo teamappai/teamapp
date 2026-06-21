@@ -13,6 +13,7 @@ import {
   editUser,
   resendInvite,
   resetUserPassword,
+  revokeInvitation,
   setUserArchived,
 } from "@/app/app/users/actions";
 import {
@@ -149,6 +150,29 @@ function UserRowItem({
               >
                 Resend invite
               </DropdownMenuItem>
+            )}
+            {row.kind === "invitation" && row.invitationId && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  variant="destructive"
+                  onClick={() => {
+                    if (
+                      !window.confirm(
+                        `Revoke the invitation for ${row.email}? This frees their seat and the invite link will stop working.`,
+                      )
+                    ) {
+                      return;
+                    }
+                    run(
+                      () => revokeInvitation(row.invitationId!),
+                      "Invitation revoked.",
+                    );
+                  }}
+                >
+                  Revoke invite
+                </DropdownMenuItem>
+              </>
             )}
             {row.kind === "user" && (
               <DropdownMenuItem
