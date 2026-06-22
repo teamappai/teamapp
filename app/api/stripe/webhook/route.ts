@@ -120,8 +120,8 @@ async function handleEvent(event: Stripe.Event): Promise<void> {
   switch (event.type) {
     case "customer.subscription.created": {
       const sub = event.data.object as Stripe.Subscription;
-      const companyId = await reconcileSubscription(sub);
-      if (companyId) {
+      const { companyId, applied } = await reconcileSubscription(sub);
+      if (applied && companyId) {
         const email = await teamLeadEmail(companyId);
         const name = await companyName(companyId);
         const planId = (sub.metadata?.plan as PlanId) ?? "launch";
@@ -144,12 +144,12 @@ async function handleEvent(event: Stripe.Event): Promise<void> {
 
     case "customer.subscription.deleted": {
       const sub = event.data.object as Stripe.Subscription;
-      const companyId = await reconcileSubscription(sub);
-      if (companyId) {
-        await service
-          .from("companies")
-          .update({ status: "canceled" })
-          .eq("id", companyId);
+      // reconcileSubscription owns the status write (and self-heals to another
+      // active sub when one exists). Only treat this as a real cancellation when
+      // the mirror was applied AND the resulting status is canceled — a deleted
+      // event for a stale/non-authoritative subscription no-ops here.
+      const { companyId, applied, status } = await reconcileSubscription(sub);
+      if (applied && companyId && status === "canceled") {
         const email = await teamLeadEmail(companyId);
         if (email) await emailCancellationCompleted({ to: email });
         // PostHog: unsubscribe_completed (CR-3 billing intent funnel terminus).
@@ -166,8 +166,8 @@ async function handleEvent(event: Stripe.Event): Promise<void> {
 
     case "customer.subscription.paused": {
       const sub = event.data.object as Stripe.Subscription;
-      const companyId = await reconcileSubscription(sub);
-      if (companyId) {
+      const { companyId, applied } = await reconcileSubscription(sub);
+      if (applied && companyId) {
         const email = await teamLeadEmail(companyId);
         if (email) {
           await emailSubscriptionPaused({
@@ -189,8 +189,8 @@ async function handleEvent(event: Stripe.Event): Promise<void> {
 
     case "customer.subscription.trial_will_end": {
       const sub = event.data.object as Stripe.Subscription;
-      const companyId = await reconcileSubscription(sub);
-      if (companyId && sub.trial_end) {
+      const { companyId, applied } = await reconcileSubscription(sub);
+      if (applied && companyId && sub.trial_end) {
         const email = await teamLeadEmail(companyId);
         if (email) {
           await emailTrialEnding({

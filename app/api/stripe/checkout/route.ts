@@ -4,6 +4,7 @@ import { isStripeConfigured } from "@/lib/billing/env";
 import { requireTeamLead } from "@/lib/auth/require-team-lead";
 import { NotAuthorizedError } from "@/lib/auth/require-super-admin";
 import { ensureCustomer, desiredItems } from "@/lib/billing/subscription";
+import { isLiveStatus } from "@/lib/billing/sync";
 import { getCompany } from "@/lib/billing/state";
 import {
   PLAN_ORDER,
@@ -58,6 +59,30 @@ export async function POST(req: NextRequest) {
   const company = await getCompany(ctx.companyId);
   if (!company) {
     return NextResponse.json({ error: "Company not found" }, { status: 404 });
+  }
+
+  // Source fix: never mint a second subscription on top of a live one. That is
+  // how a customer accumulates multiple subscriptions, which lets stale events
+  // for an old sub clobber the active pointer. Existing subscribers change
+  // plan/seats through the in-app billing flow, not Checkout.
+  if (company.stripe_subscription_id) {
+    const stripe = getStripe();
+    try {
+      const existing = await stripe.subscriptions.retrieve(
+        company.stripe_subscription_id,
+      );
+      if (isLiveStatus(existing.status)) {
+        return NextResponse.json(
+          {
+            error:
+              "You already have an active subscription. Manage your plan and seats from the billing page.",
+          },
+          { status: 409 },
+        );
+      }
+    } catch {
+      // Stored id no longer resolvable in Stripe → allow checkout to proceed.
+    }
   }
 
   const customerId = await ensureCustomer({
