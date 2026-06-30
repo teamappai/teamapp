@@ -16,9 +16,9 @@
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:mobile": "playwright test --project=mobile-iphone-se",
     "test:e2e:desktop": "playwright test --project=desktop",
-    "db:types": "supabase gen types typescript --project-id fjgnihkvqplfncmdgtpq > types/supabase.ts",
-    "db:migrate": "supabase db push",
-    "db:reset": "supabase db reset",
+    "db:types": "supabase gen types typescript --project-id ${SUPABASE_PROJECT_REF:-iwfmvsaxcohxjzndmhby} > types/supabase.ts",
+    "db:migrate": "tsx scripts/db-cli-guard.ts push",
+    "db:reset": "tsx scripts/db-cli-guard.ts reset",
     "db:seed": "tsx db/seed/seed.ts",
     "prepare": "husky"
   },
