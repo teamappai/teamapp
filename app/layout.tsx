@@ -61,7 +61,7 @@ const organizationJsonLd = {
   name: SITE_NAME,
   url: SITE_URL,
   description: SITE_DESCRIPTION,
-  logo: new URL("/icon.png", SITE_URL).toString(),
+  logo: new URL("/apple-icon.png", SITE_URL).toString(),
 };
 
 export default function RootLayout({
