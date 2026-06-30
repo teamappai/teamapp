@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Wordmark } from "@/components/shared/wordmark";
 import { NavLink } from "@/components/layout/nav-link";
 import { OnboardingWidget } from "@/components/layout/onboarding-widget";
+import { SidebarMark } from "@/components/layout/sidebar-mark";
 import type { NavItem, SidebarCta } from "@/lib/constants/nav";
 import type { UserRole } from "@/lib/constants/roles";
 import type { OnboardingProgress } from "@/lib/training/progress";
@@ -104,6 +105,12 @@ export function SidebarContent({
           <OnboardingWidget progress={onboarding} onNavigate={onNavigate} />
         </div>
       ) : null}
+
+      {/* Quiet platform attribution at the very bottom of the rail (below the
+          onboarding widget). Suppressed for super_admin — their top brand is
+          already the TeamApp wordmark. Inside the sidebar chrome, not a page
+          footer, so F-007 still holds. */}
+      {role !== "super_admin" ? <SidebarMark /> : null}
     </div>
   );
 }
