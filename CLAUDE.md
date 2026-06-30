@@ -60,6 +60,42 @@ client-importable). Set `STRIPE_PRICE_LAUNCH_MONTHLY`, `…_LAUNCH_ANNUAL`,
 - pnpm: per package.json's packageManager field
 - Mac dev tip: nvm install 22 && nvm use 22
 
+## Verification & seeding — staging only (NEVER prod)
+
+All local dev, role-based browser verification, and `db:seed` run against the
+**staging** Supabase project (`iwfmvsaxcohxjzndmhby`) — **never** production
+(`fjgnihkvqplfncmdgtpq`). Production credentials live only in Vercel and must
+never appear in a local env file.
+
+- `.env.local` points at staging (copy `.env.local.example`). Because both
+  `pnpm dev` and `pnpm db:seed*` read `.env.local`, staging is the default for
+  everything local — no flags required.
+- **Seed staging:** `pnpm db:seed:staging` (bundles the one-time
+  `TEAMAPP_ALLOW_REMOTE_DESTRUCTIVE=i-understand` opt-in). Plain `pnpm db:seed`
+  stays guard-refused on purpose.
+- **Browser verification:** `pnpm dev`, then log in at `/login`. All seed
+  accounts share the password `DevPass!123`:
+
+  | role        | email                         |
+  | ----------- | ----------------------------- |
+  | super_admin | phil@teamapp.ai               |
+  | team_lead   | phil@homereadyteam.com        |
+  | agent       | philip.kang@homereadyteam.com |
+  | admin_tc    | rochie@homereadyteam.com      |
+  | marketing   | krisha@homereadyteam.com      |
+
+  super_admin is gated at `/app/profile/2fa-required` (no seeded TOTP factor).
+  For super_admin verification, the operator provides a live 2FA code on
+  request; the other 4 roles cover the full app surface without it.
+
+- The login form is react-hook-form — type into the fields (or set values and
+  dispatch input events); `preview_fill` does not register react-hook-form
+  values, so a `preview_fill`-only login submits empty.
+
+The guard (`db/seed/guard.ts`) is the backstop: prod is refused unconditionally
+and the opt-in unlocks staging only. See `db/seed/guard.ts` and the seed
+credential block at the end of `db/seed/seed.ts`.
+
 ## Directory layout
 
 ```
@@ -251,8 +287,10 @@ Then:
 ### Where environment variables live
 
 - **`.env.local` — local/dev and CI test values only.** Test-mode Stripe keys
-  (`sk_test_…`), a dev/staging Supabase project, dev PostHog, etc. Never commit
-  it. `.env.local.example` documents every variable the app reads.
+  (`sk_test_…`), the **staging** Supabase project, dev PostHog, etc. Never commit
+  it. `.env.local.example` documents every variable the app reads. Local dev,
+  browser verification, and seeding target staging only — see
+  [Verification & seeding — staging only](#verification--seeding--staging-only-never-prod).
 - **Vercel project env — production/live values.** Live Stripe keys
   (`sk_live_…` / `pk_live_…`) and live price IDs, the production Supabase
   project, production PostHog, `NEXT_PUBLIC_SENTRY_DSN` + `SENTRY_AUTH_TOKEN`,

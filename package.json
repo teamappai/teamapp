@@ -20,6 +20,7 @@
     "db:migrate": "tsx scripts/db-cli-guard.ts push",
     "db:reset": "tsx scripts/db-cli-guard.ts reset",
     "db:seed": "tsx db/seed/seed.ts",
+    "db:seed:staging": "TEAMAPP_ALLOW_REMOTE_DESTRUCTIVE=i-understand pnpm db:seed",
     "prepare": "husky"
   },
   "dependencies": {
