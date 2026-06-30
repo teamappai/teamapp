@@ -118,6 +118,10 @@
   --color-sidebar-ring: var(--sidebar-ring);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  /* Brand tokens (BRAND_TOKENS.md) — monochrome by design, no accent color */
+  --color-brand-ink: #000000;
+  --color-brand-ink-muted: #3f4045;
+  --color-brand-surface: #eeeef8;
 }
 
 @layer base {
