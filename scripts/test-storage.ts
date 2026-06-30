@@ -7,6 +7,10 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "../types/supabase";
+import {
+  assertSafeDestructiveTarget,
+  printTargetBanner,
+} from "../db/seed/guard";
 
 for (const line of readFileSync(
   resolve(process.cwd(), ".env.local"),
@@ -25,6 +29,11 @@ const ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 const SERVICE = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const PASSWORD = "DevPass!123";
 const BLOB = new Blob(["teamapp storage test"], { type: "text/plain" });
+
+// This probe writes/removes storage objects with the service-role key — guard
+// the target before any client exists (never run it against production).
+printTargetBanner(URL, "STORAGE TEST");
+assertSafeDestructiveTarget(URL, { operation: "STORAGE TEST" });
 
 const service = createClient<Database>(URL, SERVICE, {
   auth: { autoRefreshToken: false, persistSession: false },

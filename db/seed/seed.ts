@@ -14,6 +14,7 @@ import { resolve } from "node:path";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "../../types/supabase";
 import { getPlan, type PlanId } from "../../lib/billing/plans";
+import { assertSafeDestructiveTarget, printTargetBanner } from "./guard";
 
 type Tables = Database["public"]["Tables"];
 type UserRole = Database["public"]["Enums"]["user_role"];
@@ -60,6 +61,12 @@ if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
   );
   process.exit(1);
 }
+
+// Refuse to seed against production (or any unidentified target) BEFORE the
+// service-role client exists. This seed clears the demo company's data, so it
+// must never touch the production project. See db/seed/guard.ts.
+printTargetBanner(SUPABASE_URL, "SEED");
+assertSafeDestructiveTarget(SUPABASE_URL, { operation: "SEED" });
 
 const admin: SupabaseClient<Database> = createClient<Database>(
   SUPABASE_URL,
